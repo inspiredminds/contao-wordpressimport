@@ -112,7 +112,7 @@ class Importer
                 ]);
 
                 // get the posts from WordPress
-                $arrResult = $this->getPostsFromWordpress($client, $intLimit);
+                $arrResult = $this->getPostsFromWordpress($client, $objArchive, $intLimit);
 
                 // go through each post
                 foreach ($arrResult as $objPost)
@@ -130,9 +130,10 @@ class Importer
     /**
      * Get wordpress posts from given URL
      * @param String $url
+     * @param NewsArchiveModel $objArchive
      * @return Array
      */
-    protected function getPostsFromWordpress(Client $client, $intLimit = null)
+    protected function getPostsFromWordpress(Client $client, NewsArchiveModel $objArchive, $intLimit = null)
     {
         // set maximum for limit
         $intLimit = $intLimit ? min(100, $intLimit) : null;
@@ -152,7 +153,7 @@ class Importer
             foreach ($arrResult as $objPost)
             {
                 // check if post already exists
-                if (NewsModel::countByWpPostId($objPost->id) == 0)
+                if (NewsModel::countBy(['wpPostId = ?', 'pid = ?'], [$objPost->id, $objArchive->id]) == 0)
                 {
                     $arrReturn[] = $objPost;
                 }
@@ -214,7 +215,7 @@ class Importer
         }
 
         // check if post already exists (skip)
-        if (NewsModel::countByWpPostId($objPost->id) > 0)
+        if (NewsModel::countBy(['wpPostId = ?', 'pid = ?'], [$objPost->id, $objArchive->id]) > 0)
         {
             return;
         }
