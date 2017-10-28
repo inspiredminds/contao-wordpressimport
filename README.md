@@ -19,6 +19,8 @@ to your `AppKernel.php`.
 
 Once installed, you will have new options within a news archive:
 
+![Contao news archive settings](https://github.com/inspiredminds/contao-wordpressimport/raw/master/newsarchive-settings.png)
+
 * __WordPress URL__: This is the URL to your remote WordPress installation, from which you want to import news. This WordPress installation must have the [WP REST API](http://v2.wp-api.org/) available. It's included and active by default in WordPress 4.7 and higher.
 * __Import periodically__: Instead of importing the WordPress posts via console command (see below), you can activate a periodic import here, which will be done via Contao's cronjob.
 * __Default author__: Every imported news item will have this author assigned, if no other author is available (see next option).
