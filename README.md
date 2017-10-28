@@ -1,4 +1,4 @@
-Contao WordPressImport Bundle
+Contao WordPress Import Bundle
 =====================
 
 Contao 4 bundle that allows you to import news articles from WordPress posts via the WordPress JSON API.
