@@ -28,6 +28,13 @@ class Cron
      */
     public function import()
     {
-        System::getContainer()->get('wordpressimporter')->import(Config::get('wpImportLimit'), true);
+    	try
+    	{
+        	System::getContainer()->get('wordpressimporter')->import(Config::get('wpImportLimit'), true);
+        }
+        catch (\Exception $e)
+        {
+        	System::log('An error occurred while importing WordPress posts: '.$e->getMessage(), __METHOD__, TL_ERROR);
+        }
     }
 }
