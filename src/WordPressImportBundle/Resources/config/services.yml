@@ -1,0 +1,4 @@
+services:
+    wordpressimporter:
+        class: 'WordPressImportBundle\Service\Importer'
+        arguments: ['@doctrine.dbal.default_connection', '@contao.framework']
