@@ -34,7 +34,7 @@ To import the WordPress posts into your Contao installation, you can use the fol
 ```
 vendor/bin/contao-console wordpressimport
 ```
-Optionally you can define the limit of how many WordPress posta re imported in one go:
+Optionally you can define the limit of how many WordPress posts are imported in one go:
 ```
 vendor/bin/contao-console wordpressimport 10
 ```
