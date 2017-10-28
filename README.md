@@ -26,7 +26,7 @@ Once installed, you will have new options within a news archive:
 * __Default author__: Every imported news item will have this author assigned, if no other author is available (see next option).
 * __Import authors__: This will generate new backend users for each new found author. Existing authors are identified by their name, so if your Contao installation already has a backend user with the same name as an author from a WordPress post, that backend user will be used as the author. _Note:_ the automatically generated authors are just bare entries. They will only have their name set. They will not have a username or password and they will be disabled by default.
 * __Import folder__: When a WordPress posts gets imported, its teaser image and all images from its detailed content are saved to this folder.
-* __Category__: This is an optional root category, under which every imported category of the WordPress posts will reside. If you do not specify a root category, the imported categories will be imported to the root. _Note:_ this option will only be available, if you have the [`news_categories`](https://github.com/codefog/contao-news_categories) installed.
+* __Category__: This is an optional root category, under which every imported category of the WordPress posts will reside. If you do not specify a root category, the imported categories will be imported to the root. _Note:_ this option will only be available, if you have the [`news_categories`](https://github.com/codefog/contao-news_categories) extension installed.
 
 ### Console Command
 
@@ -42,6 +42,6 @@ This will only import 10 WordPress posts at a time.
 
 ### Periodic import
 
-If you activated the periodic import, the WordPress posts will be imported _hourly_ by Contao's cronjob. _Note:_ by default only __10__ items will be imported with each cronjob execution. The import can take a long time (depending on the number of WordPress posts and the number of images to be downloaded). This limit is there so that a cronjob execution does not block a user's request indefinitely (or at least until the `max_execution_time` limit is hit).
+If you activated the periodic import, the WordPress posts will be imported _hourly_ by Contao's cronjob. _Note:_ by default only __10__ items will be imported with each cronjob execution. The import can take a long time (depending on the number of WordPress posts and the number of images to be downloaded). This limit is there so that a cronjob execution does not block a user's request for a long time (or at least until the `max_execution_time` limit is hit).
 
 You can change this limit in the _System Settings_.
