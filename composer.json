@@ -1,5 +1,5 @@
 {
-	"name":"fritzmg/contao-wordpressimport",
+	"name":"inspiredminds/contao-wordpressimport",
 	"description":"Contao 4 bundle that allows you to import news articles from WordPress posts via the WordPress JSON API.",
 	"keywords":["contao", "wordpress", "import", "news"],
 	"type":"contao-bundle",
