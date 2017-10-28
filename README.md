@@ -40,6 +40,8 @@ vendor/bin/contao-console wordpressimport 10
 ```
 This will only import 10 WordPress posts at a time.
 
+Use `bin/console` in the Contao Standard Edition.
+
 ### Periodic import
 
 If you activated the periodic import, the WordPress posts will be imported _hourly_ by Contao's cronjob. _Note:_ by default only __10__ items will be imported with each cronjob execution. The import can take a long time (depending on the number of WordPress posts and the number of images to be downloaded). This limit is there so that a cronjob execution does not block a user's request for a long time (or at least until the `max_execution_time` limit is hit).
