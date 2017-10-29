@@ -1,4 +1,4 @@
-[![Packagist](https://img.shields.io/packagist/dt/doctrine/orm.svg)]()
+[![Packagist](https://img.shields.io/packagist/dt/inspiredminds/contao-wordpressimport.svg)]()
 
 Contao WordPress Import Bundle
 =====================
