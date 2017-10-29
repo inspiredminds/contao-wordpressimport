@@ -97,7 +97,7 @@ if (in_array('ContaoCommentsBundle', array_keys(System::getContainer()->getParam
     $GLOBALS['TL_DCA']['tl_news_archive']['subpalettes']['wpImport'] = str_replace(',wpImportAuthors', ',wpImportAuthors,wpImportComments', $GLOBALS['TL_DCA']['tl_news_archive']['subpalettes']['wpImport']);
     $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImportComments'] = array
     (
-        'label'      => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportComments'],//['Kategorie', 'Optionale Wurzel-Kategorie.'],
+        'label'      => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportComments'],
         'exclude'    => true,
         'inputType' => 'checkbox',
         'eval'      => array('tl_class'=>'w50'),
