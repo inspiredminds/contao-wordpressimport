@@ -9,11 +9,13 @@ Require the bundle via composer:
 ```
 composer require inspiredminds/contao-wordpressimport
 ```
-The execute the Contao Install Tool. If you use the Contao Standard Edition, you will have to add
+If you use the Contao Standard Edition, you will have to add
 ```php
 new WordPressImportBundle\WordPressImportBundle()
 ```
-to your `AppKernel.php`.
+to your `AppKernel.php`. 
+
+Then execute the Contao Install Tool to update the database.
 
 ## Usage
 
