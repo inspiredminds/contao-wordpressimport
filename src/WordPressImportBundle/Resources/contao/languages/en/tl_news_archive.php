@@ -21,3 +21,4 @@ $GLOBALS['TL_LANG']['tl_news_archive']['wpDefaultAuthor'] = array('Default autho
 $GLOBALS['TL_LANG']['tl_news_archive']['wpImportAuthors'] = array('Import authors', 'Imports the authors of each WordPress post.');
 $GLOBALS['TL_LANG']['tl_news_archive']['wpImportCron'] = array('Import periodically', 'Imports the WordPress post periodically via the Contao cronjob.');
 $GLOBALS['TL_LANG']['tl_news_archive']['wpImportCategory'] = array('Category', 'Optional root category.');
+$GLOBALS['TL_LANG']['tl_news_archive']['wpImportComments'] = array('Import comments', 'Imports comments of the WordPress posts.');

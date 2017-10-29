@@ -22,7 +22,7 @@ $GLOBALS['TL_LANG']['tl_news_archive']['wordpress_import'] = 'WordPress Import';
 
 $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImport'] = array
 (
-    'label'     => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImport'],//['WordPress Import', 'Aktiviert den Import von einer WordPress Installation.'],
+    'label'     => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImport'],
     'exclude'   => true,
     'inputType' => 'checkbox',
     'eval'      => array('submitOnChange'=>true),
@@ -31,7 +31,7 @@ $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImport'] = array
 
 $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImportUrl'] = array
 (
-    'label'     => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportUrl'],//['WordPress URL', 'URL zu der WordPress Installation.'],
+    'label'     => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportUrl'],
     'exclude'   => true,
     'inputType' => 'text',
     'eval'      => array('mandatory'=>true, 'rgxp'=>'url', 'decodeEntities'=>true, 'maxlength'=>255, 'tl_class'=>'w50'),
@@ -40,7 +40,7 @@ $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImportUrl'] = array
 
 $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImportFolder'] = array
 (
-    'label'     => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportFolder'],//['Import Verzeichnis', 'Legt das Verzeichnis für den Import der Bilder fest.'],
+    'label'     => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportFolder'],
     'exclude'   => true,
     'inputType' => 'fileTree',
     'eval'      => array('files'=>false, 'fieldType'=>'radio', 'mandatory'=>true, 'tl_class'=>'clr'),
@@ -49,7 +49,7 @@ $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImportFolder'] = array
 
 $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpDefaultAuthor'] = array
 (
-    'label'      => &$GLOBALS['TL_LANG']['tl_news_archive']['wpDefaultAuthor'],//['Standard Autor', 'Der Standard Autor, falls keine Autoren importiert werden.'],
+    'label'      => &$GLOBALS['TL_LANG']['tl_news_archive']['wpDefaultAuthor'],
     'exclude'    => true,
     'inputType'  => 'select',
     'foreignKey' => 'tl_user.name',
@@ -60,7 +60,7 @@ $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpDefaultAuthor'] = array
 
 $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImportAuthors'] = array
 (
-    'label'     => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportAuthors'],//['Autoren importieren', 'Importiert die Autoren der WordPress Posts.'],
+    'label'     => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportAuthors'],
     'exclude'   => true,
     'inputType' => 'checkbox',
     'eval'      => array('tl_class'=>'w50 m12'),
@@ -69,19 +69,20 @@ $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImportAuthors'] = array
 
 $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImportCron'] = array
 (
-    'label'     => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportCron'],//['Periodisch importieren', 'Importiert WordPress Posts periodisch über den Contao Cronjob.'],
+    'label'     => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportCron'],
     'exclude'   => true,
     'inputType' => 'checkbox',
     'eval'      => array('tl_class'=>'w50 m12'),
     'sql'       => "char(1) NOT NULL default ''"
 );
 
+
 if (in_array('news_categories', array_keys(System::getContainer()->getParameter('kernel.bundles'))))
 {
     $GLOBALS['TL_DCA']['tl_news_archive']['subpalettes']['wpImport'] = str_replace(',wpImportFolder', ',wpImportFolder,wpImportCategory', $GLOBALS['TL_DCA']['tl_news_archive']['subpalettes']['wpImport']);
     $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImportCategory'] = array
     (
-        'label'      => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportCategory'],//['Kategorie', 'Optionale Wurzel-Kategorie.'],
+        'label'      => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportCategory'],
         'exclude'    => true,
         'inputType'  => 'treePicker',
         'foreignKey' => 'tl_news_category.title',
@@ -89,3 +90,18 @@ if (in_array('news_categories', array_keys(System::getContainer()->getParameter(
         'sql'        => "int(10) unsigned NOT NULL default '0'"
     );
 }
+
+
+if (in_array('ContaoCommentsBundle', array_keys(System::getContainer()->getParameter('kernel.bundles'))))
+{
+    $GLOBALS['TL_DCA']['tl_news_archive']['subpalettes']['wpImport'] = str_replace(',wpImportAuthors', ',wpImportAuthors,wpImportComments', $GLOBALS['TL_DCA']['tl_news_archive']['subpalettes']['wpImport']);
+    $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImportComments'] = array
+    (
+        'label'      => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportComments'],//['Kategorie', 'Optionale Wurzel-Kategorie.'],
+        'exclude'    => true,
+        'inputType' => 'checkbox',
+        'eval'      => array('tl_class'=>'w50'),
+        'sql'       => "char(1) NOT NULL default ''"
+    );
+}
+

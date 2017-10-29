@@ -14,6 +14,7 @@
 
 namespace WordPressImportBundle\Service;
 
+use Contao\CommentsModel;
 use Contao\Config;
 use Contao\ContentModel;
 use Contao\CoreBundle\Framework\ContaoFramework;
@@ -27,7 +28,6 @@ use Contao\UserModel;
 use Doctrine\DBAL\Connection;
 use GuzzleHttp\Client;
 use NewsCategories\NewsCategoryModel;
-use Symfony\Component\VarDumper\VarDumper;
 
 class Importer
 {
@@ -50,6 +50,11 @@ class Importer
      * API endpoint for media (images)
      */
     const API_MEDIA = "/wp-json/wp/v2/media";
+
+    /**
+     * API endpoint for comments
+     */
+    const API_COMMENTS = "/wp-json/wp/v2/comments";
 
 	/**
 	 * Database connection
@@ -269,6 +274,8 @@ class Importer
         // import the authors
         $this->importAuthor($client, $objPost, $objNews, $objArchive);
 
+        // import comments
+        $this->importComments($client, $objPost, $objNews);
     }
 
 
@@ -587,5 +594,40 @@ class Importer
 
         // return the category
         return $objCategory;
+    }
+
+
+    /**
+     * Imports comments for a news item
+     * @param Client $client
+     * @param object $objPost
+     * @param NewsModel $objNews
+     * @return void
+     */
+    protected function importComments(Client $client, $objPost, NewsModel $objNews)
+    {
+        // only import comments, if the ContaoCommentsBundle is available
+        if (!in_array('ContaoCommentsBundle', array_keys(System::getContainer()->getParameter('kernel.bundles'))))
+        {
+            return;
+        }
+
+        // retreive the comments for the post
+        $arrComments = $this->request($client, self::API_COMMENTS, ['post' => $objPost->id]);
+
+        // go through each comment
+        foreach ($arrComments as $objWPComment)
+        {
+            $objComment = new CommentsModel();
+            $objComment->tstamp = time();
+            $objComment->source = 'tl_news';
+            $objComment->parent = $objNews->id;
+            $objComment->date = strtotime($objWPComment->date_gmt);
+            $objComment->name = $objWPComment->author_name;
+            $objComment->website = $objWPComment->author_url;
+            $objComment->comment = $objWPComment->content->rendered;
+            $objComment->published = ('approved' == $objWPComment->status);
+            $objComment->save();
+        }
     }
 }
