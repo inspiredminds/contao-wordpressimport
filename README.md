@@ -1,4 +1,6 @@
-[![Packagist](https://img.shields.io/packagist/dt/inspiredminds/contao-wordpressimport.svg)](https://packagist.org/packages/inspiredminds/contao-wordpressimport)
+[![](https://img.shields.io/maintenance/yes/2017.svg)](https://github.com/inspiredminds/contao-wordpressimport)
+[![](https://img.shields.io/packagist/v/inspiredminds/contao-wordpressimport.svg)](https://packagist.org/packages/inspiredminds/contao-wordpressimport)
+[![](https://img.shields.io/packagist/dt/inspiredminds/contao-wordpressimport.svg)](https://packagist.org/packages/inspiredminds/contao-wordpressimport)
 
 Contao WordPress Import Bundle
 =====================
