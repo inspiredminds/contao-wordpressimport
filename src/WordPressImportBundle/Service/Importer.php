@@ -34,27 +34,27 @@ class Importer
     /**
      * API endpoint for posts
      */
-    const API_POSTS = "/wp-json/wp/v2/posts";
+    const API_POSTS = "wp-json/wp/v2/posts";
 
     /**
      * API endpoint for categories
      */
-    const API_CATEGORIES = "/wp-json/wp/v2/categories";
+    const API_CATEGORIES = "wp-json/wp/v2/categories";
 
     /**
      * API endpoint for users (authors)
      */
-    const API_USERS = "/wp-json/wp/v2/users";
+    const API_USERS = "wp-json/wp/v2/users";
 
     /**
      * API endpoint for media (images)
      */
-    const API_MEDIA = "/wp-json/wp/v2/media";
+    const API_MEDIA = "wp-json/wp/v2/media";
 
     /**
      * API endpoint for comments
      */
-    const API_COMMENTS = "/wp-json/wp/v2/comments";
+    const API_COMMENTS = "wp-json/wp/v2/comments";
 
 	/**
 	 * Database connection
@@ -110,9 +110,9 @@ class Importer
                     continue;
                 }
 
-                // create HTTP client
+                // create HTTP client, taking care of the trailing slash in wpImportUrl
                 $client = new Client([
-                    'base_uri' => $objArchive->wpImportUrl,
+                    'base_uri' => $objArchive->wpImportUrl . (mb_substr($objArchive->wpImportUrl, -1) != '/' ? '/' : ''),
                     'headers' => ['Accept' => 'application/json']
                 ]);
 
