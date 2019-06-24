@@ -154,6 +154,12 @@ class Importer
             // get the result for the page
             $arrResult = $this->request($client, self::API_POSTS, ['per_page'=>$per_page, 'offset'=>$offset]);
 
+            // check for array
+            if (!\is_array($arrResult))
+            {
+                break;
+            }
+
             // go through each result
             foreach ($arrResult as $objPost)
             {
