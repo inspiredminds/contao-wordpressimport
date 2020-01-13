@@ -1,4 +1,12 @@
 services:
+    _defaults:
+        autoconfigure: true
+        public: false 
+
     wordpressimporter:
-        class: 'WordPressImportBundle\Service\Importer'
+        class: WordPressImportBundle\Service\Importer
         arguments: ['@doctrine.dbal.default_connection', '@contao.framework']
+
+    wordpressimport_command:
+        class: WordPressImportBundle\Command\ImportCommand
+        arguments: ['@wordpressimporter']

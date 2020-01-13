@@ -1,16 +1,12 @@
 <?php
 
-/**
+declare(strict_types=1);
+
+/*
  * This file is part of the WordPressImport Bundle.
  *
  * (c) inspiredminds <https://github.com/inspiredminds>
- *
- * @package   WordPressImportBundle
- * @author    Fritz Michael Gschwantner <https://github.com/fritzmg>
- * @license   LGPL-3.0+
- * @copyright inspiredminds 2017
  */
-
 
 namespace WordPressImportBundle\Service;
 
@@ -32,57 +28,60 @@ use NewsCategories\NewsCategoryModel;
 class Importer
 {
     /**
-     * API endpoint for posts
+     * API endpoint for posts.
      */
-    const API_POSTS = "wp-json/wp/v2/posts";
+    public const API_POSTS = 'wp-json/wp/v2/posts';
 
     /**
-     * API endpoint for categories
+     * API endpoint for categories.
      */
-    const API_CATEGORIES = "wp-json/wp/v2/categories";
+    public const API_CATEGORIES = 'wp-json/wp/v2/categories';
 
     /**
-     * API endpoint for users (authors)
+     * API endpoint for users (authors).
      */
-    const API_USERS = "wp-json/wp/v2/users";
+    public const API_USERS = 'wp-json/wp/v2/users';
 
     /**
-     * API endpoint for media (images)
+     * API endpoint for media (images).
      */
-    const API_MEDIA = "wp-json/wp/v2/media";
+    public const API_MEDIA = 'wp-json/wp/v2/media';
 
     /**
-     * API endpoint for comments
+     * API endpoint for comments.
      */
-    const API_COMMENTS = "wp-json/wp/v2/comments";
+    public const API_COMMENTS = 'wp-json/wp/v2/comments';
 
-	/**
-	 * Database connection
-	 * @var Connection
-	 */
+    /**
+     * Database connection.
+     *
+     * @var Connection
+     */
     protected $db;
 
     /**
-     * Contao framework service
+     * Contao framework service.
+     *
      * @var ContaoFramework
      */
     protected $framework;
 
-
     /**
      * Constructor for Importer service.
+     *
      * @param Connection $db Database connection
      */
-    public function __construct(Connection $db, ContaoFramework $framework) 
+    public function __construct(Connection $db, ContaoFramework $framework)
     {
         $this->db = $db;
         $this->framework = $framework;
-        
     }
-
 
     /**
      * Executes the import for all Contao news archives.
+     *
+     * @param mixed|null $intLimit
+     *
      * @return array Import result
      */
     public function import($intLimit = null, $blnCronOnly = false)
@@ -91,52 +90,47 @@ class Importer
         $this->framework->initialize();
 
         // prepare the result
-        $arrResult = array();
+        $arrResult = [];
 
         // go through each news archive with active WordPress import
-        if (null !== ($objArchives = NewsArchiveModel::findByWpImport('1')))
-        {
-            foreach ($objArchives as $objArchive)
-            {
+        if (null !== ($objArchives = NewsArchiveModel::findByWpImport('1'))) {
+            foreach ($objArchives as $objArchive) {
                 // check for cron only archives
-                if ($blnCronOnly && !$objArchive->wpImportCron)
-                {
+                if ($blnCronOnly && !$objArchive->wpImportCron) {
                     continue;
                 }
 
                 // check if a wordpress URL and import folder is present
-                if (!$objArchive->wpImportUrl || !$objArchive->wpImportFolder)
-                {
+                if (!$objArchive->wpImportUrl || !$objArchive->wpImportFolder) {
                     continue;
                 }
 
                 // create HTTP client, taking care of the trailing slash in wpImportUrl
                 $client = new Client([
-                    'base_uri' => $objArchive->wpImportUrl . (mb_substr($objArchive->wpImportUrl, -1) != '/' ? '/' : ''),
-                    'headers' => ['Accept' => 'application/json']
+                    'base_uri' => $objArchive->wpImportUrl.('/' !== mb_substr($objArchive->wpImportUrl, -1) ? '/' : ''),
+                    'headers' => ['Accept' => 'application/json'],
                 ]);
 
                 // get the posts from WordPress
                 $arrResult = $this->getPostsFromWordpress($client, $objArchive, $intLimit);
 
                 // go through each post
-                foreach ($arrResult as $objPost)
-                {
+                foreach ($arrResult as $objPost) {
                     // import the news
                     $this->importNews($client, $objPost, $objArchive);
                 }
             }
         }
 
-    	return $arrResult;
+        return $arrResult;
     }
 
-
     /**
-     * Get wordpress posts from given URL
-     * @param String $url
-     * @param NewsArchiveModel $objArchive
-     * @return Array
+     * Get wordpress posts from given URL.
+     *
+     * @param mixed|null $intLimit
+     *
+     * @return array
      */
     protected function getPostsFromWordpress(Client $client, NewsArchiveModel $objArchive, $intLimit = null)
     {
@@ -144,7 +138,7 @@ class Importer
         $intLimit = $intLimit ? min(100, $intLimit) : null;
 
         // prepare result array
-        $arrReturn = array();
+        $arrReturn = [];
 
         // initial offset and per_page
         $offset = 0;
@@ -152,82 +146,70 @@ class Importer
 
         do {
             // get the result for the page
-            $arrResult = $this->request($client, self::API_POSTS, ['per_page'=>$per_page, 'offset'=>$offset]);
+            $arrResult = $this->request($client, self::API_POSTS, ['per_page' => $per_page, 'offset' => $offset]);
 
             // check for array
-            if (!\is_array($arrResult))
-            {
+            if (!\is_array($arrResult)) {
                 break;
             }
 
             // go through each result
-            foreach ($arrResult as $objPost)
-            {
+            foreach ($arrResult as $objPost) {
                 // check if post already exists
-                if (NewsModel::countBy(['wpPostId = ?', 'pid = ?'], [$objPost->id, $objArchive->id]) == 0)
-                {
+                if (0 === NewsModel::countBy(['wpPostId = ?', 'pid = ?'], [$objPost->id, $objArchive->id])) {
                     $arrReturn[] = $objPost;
                 }
             }
 
             // check for limit
-            if ($intLimit && count($arrReturn) >= $intLimit)
-            {
+            if ($intLimit && \count($arrReturn) >= $intLimit) {
                 break;
             }
 
             // increase offset
             $offset += $per_page;
 
-        // run while there are results from the API
+            // run while there are results from the API
         } while ($arrResult);
 
         // return the results
         return $arrReturn;
     }
 
-
     /**
-     * Perform requests to API
-     * @param Client $client
-     * @param String $endpoint
-     * @param array $params
+     * Perform requests to API.
+     *
      * @return object
      */
-    protected function request(Client $client, String $endpoint, array $params = array())
+    protected function request(Client $client, string $endpoint, array $params = [])
     {
         $json = $client->get($endpoint, ['query' => $params])->getBody()->getContents();
-      
+
         // Remove hidden characters from json (https://stackoverflow.com/questions/17219916/json-decode-returns-json-error-syntax-but-online-formatter-says-the-json-is-ok)
-        for ($i = 0; $i <= 31; ++$i) { 
-            $json = str_replace(chr($i), "", $json); 
+        for ($i = 0; $i <= 31; ++$i) {
+            $json = str_replace(\chr($i), '', $json);
         }
-        $json = str_replace(chr(127), "", $json);
+        $json = str_replace(\chr(127), '', $json);
 
         if (0 === strpos(bin2hex($json), 'efbbbf')) {
-           $json = substr($json, 3);
+            $json = substr($json, 3);
         }
 
         return json_decode($json);
     }
 
-
     /**
-     * Imports the categories for the news object
-     * @param NewsModel $objNews
-     * @return void
+     * Imports the categories for the news object.
      */
-    protected function importNews(Client $client, $objPost, NewsArchiveModel $objArchive)
+    protected function importNews(Client $client, $objPost, NewsArchiveModel $objArchive): void
     {
         // only import posts
-        if ('post' != $objPost->type)
-        {
+        if ('post' !== $objPost->type) {
             return;
         }
 
         // check if post already exists (skip)
-        if (NewsModel::countBy(['wpPostId = ?', 'pid = ?'], [$objPost->id, $objArchive->id]) > 0)
-        {
+        if (NewsModel::countBy(['wpPostId = ?', 'pid = ?'], [$objPost->id, $objArchive->id]) > 0) {
             return;
         }
 
@@ -240,19 +222,18 @@ class Importer
         $objNews->tstamp = time();
         $objNews->date = strtotime($objPost->date_gmt);
         $objNews->time = strtotime($objPost->date_gmt);
-        $objNews->published = (('publish' == $objPost->status) ? '1' : '');
+        $objNews->published = (('publish' === $objPost->status) ? '1' : '');
         $objNews->teaser = $this->processHtml($objPost->excerpt->rendered, $strTargetFolder);
         $objNews->headline = strip_tags($objPost->title->rendered);
         $objNews->source = 'default';
         $objNews->floating = 'above';
         $objNews->alias = $objPost->slug;
         $objNews->wpPostId = $objPost->id;
-        $objNews->noComments = ($objPost->comment_status != 'closed' ? '' : '1');
+        $objNews->noComments = ('closed' !== $objPost->comment_status ? '' : '1');
         $objNews->author = $objArchive->wpDefaultAuthor;
 
-        if (NewsModel::findOneByAlias($objNews->alias) !== null)
-        {
-            $objNews->alias.= '-' . $objPost->id;
+        if (null !== NewsModel::findOneByAlias($objNews->alias)) {
+            $objNews->alias .= '-'.$objPost->id;
         }
 
         // save the news
@@ -262,8 +243,7 @@ class Importer
         $this->importImage($client, $objPost, $objNews, $objArchive);
 
         // import the detail text
-        if ($objPost->content && $objPost->content->rendered)
-        {
+        if ($objPost->content && $objPost->content->rendered) {
             $objContent = new ContentModel();
             $objContent->ptable = NewsModel::getTable();
             $objContent->sorting = 128;
@@ -284,31 +264,24 @@ class Importer
         $this->importComments($client, $objPost, $objNews);
     }
 
-
     /**
      * Downloads the featured_media of the post and adds as a teaser image.
-     * @param Client $client
+     *
      * @param object $objPost
-     * @param NewsModel $objNews
-     * @param NewsArchiveModel $objArchive
-     * @return void
      */
-    protected function importImage(Client $client, $objPost, NewsModel $objNews, NewsArchiveModel $objArchive)
+    protected function importImage(Client $client, $objPost, NewsModel $objNews, NewsArchiveModel $objArchive): void
     {
-        if (!$objPost->featured_media)
-        {
+        if (!$objPost->featured_media) {
             return;
         }
 
-        $objMedia = $this->request($client, self::API_MEDIA . '/' . $objPost->featured_media);
+        $objMedia = $this->request($client, self::API_MEDIA.'/'.$objPost->featured_media);
 
-        if (!$objMedia)
-        {
+        if (!$objMedia) {
             return;
         }
 
-        if ('image' != $objMedia->media_type)
-        {
+        if ('image' !== $objMedia->media_type) {
             return;
         }
 
@@ -319,39 +292,37 @@ class Importer
         $objFile = $this->downloadFile($objMedia->source_url, $strTargetFolder);
 
         // check if file exists
-        if ($objFile)
-        {
+        if ($objFile) {
             $objNews->addImage = '1';
             $objNews->singleSRC = $objFile->uuid;
             $objNews->save();
         }
     }
 
-
     /**
-     * Downloads a file
-     * @param  string $strUrl
-     * @param  string $strTargetFolder
+     * Downloads a file.
+     *
+     * @param string $strUrl
+     * @param string $strTargetFolder
+     *
      * @return FilesModel|null
      */
     protected function downloadFile($strUrl, $strTargetFolder)
     {
-        if (!$strUrl || !$strTargetFolder)
-        {
+        if (!$strUrl || !$strTargetFolder) {
             return null;
         }
 
         // decode the url
 
         // get the url info
-        $objUrlinfo = (object)parse_url($strUrl);
+        $objUrlinfo = (object) parse_url($strUrl);
 
         // get the path info
-        $objPathinfo = (object)pathinfo($objUrlinfo->path);
+        $objPathinfo = (object) pathinfo($objUrlinfo->path);
 
         // we only allow the download of files that have an extension
-        if (!$objPathinfo->extension)
-        {
+        if (!$objPathinfo->extension) {
             return null;
         }
 
@@ -359,47 +330,43 @@ class Importer
         $strSubFolder = trim(str_replace('wp-content/uploads', '', $objPathinfo->dirname), '/');
 
         // determine the filename
-        $strFileName =  $objPathinfo->filename . '-' . substr(md5($strUrl), 0, 8) . '.' . $objPathinfo->extension;
+        $strFileName = $objPathinfo->filename.'-'.substr(md5($strUrl), 0, 8).'.'.$objPathinfo->extension;
 
         // determine the full (relative) file path
-        $strFilePath = $strTargetFolder . '/' . $strSubFolder . '/' . $strFileName;
+        $strFilePath = $strTargetFolder.'/'.$strSubFolder.'/'.$strFileName;
 
         // check if file exists already
-        if (file_exists(TL_ROOT . '/' . $strFilePath))
-        {
+        if (file_exists(TL_ROOT.'/'.$strFilePath)) {
             return Dbafs::addResource($strFilePath);
         }
 
         // check if subdirectory exists
-        if (!file_exists(TL_ROOT . '/' . $strTargetFolder . '/' . $strSubFolder))
-        {
-            mkdir(TL_ROOT . '/' . $strTargetFolder . '/' . $strSubFolder, 0777, true);
+        if (!file_exists(TL_ROOT.'/'.$strTargetFolder.'/'.$strSubFolder)) {
+            mkdir(TL_ROOT.'/'.$strTargetFolder.'/'.$strSubFolder, 0777, true);
         }
 
         // download the file
-        try
-        {
-            (new Client())->get($strUrl, ['sink' => TL_ROOT . '/' . $strFilePath]);
-        }
-        catch (\Exception $e)
-        {
-            System::log('Error while downloading "'.$strUrl.'": '. StringUtil::substr($e->getMessage(), 280), __METHOD__, TL_ERROR);
+        try {
+            (new Client())->get($strUrl, ['sink' => TL_ROOT.'/'.$strFilePath]);
+        } catch (\Exception $e) {
+            System::log('Error while downloading "'.$strUrl.'": '.StringUtil::substr($e->getMessage(), 280), __METHOD__, TL_ERROR);
+
             return null;
         }
 
-        if (file_exists(TL_ROOT . '/' . $strFilePath))
-        {
+        if (file_exists(TL_ROOT.'/'.$strFilePath)) {
             return Dbafs::addResource($strFilePath);
         }
 
         return null;
     }
-    
 
     /**
      * Processes the text and looks for any src and srcset attributes,
      * downloads the images and replacs them with {{file::*}} insert tags.
-     * @param  string $strText
+     *
+     * @param string $strText
+     *
      * @return string
      */
     protected function processHtml($strText, $strTargetFolder)
@@ -408,47 +375,40 @@ class Importer
         $strText = strip_tags($strText, Config::get('allowedTags'));
 
         // parse the text
-        $dom = new \PHPHtmlParser\Dom;
+        $dom = new \PHPHtmlParser\Dom();
         $dom->load($strText);
 
         // find all images
         $imgs = $dom->find('img');
 
         // go throuch each image
-        foreach ($imgs as $img)
-        {
+        foreach ($imgs as $img) {
             // check if image has src
-            if ($img->getAttribute('src'))
-            {
+            if ($img->getAttribute('src')) {
                 // download the src
-                if (null !== ($objFile = $this->downloadFile($img->getAttribute('src'), $strTargetFolder)))
-                {
+                if (null !== ($objFile = $this->downloadFile($img->getAttribute('src'), $strTargetFolder))) {
                     // set insert tags
-                    $img->setAttribute('src', '{{file::'. StringUtil::binToUuid($objFile->uuid) .'}}');
+                    $img->setAttribute('src', '{{file::'.StringUtil::binToUuid($objFile->uuid).'}}');
                 }
             }
 
             // check if image has srcset
-            if ($img->getAttribute('srcset'))
-            {
+            if ($img->getAttribute('srcset')) {
                 // explode
                 $arrSrcset = array_map('trim', explode(',', $img->getAttribute('srcset')));
 
                 // go through each srcset
-                foreach ($arrSrcset as &$srcdesc)
-                {
+                foreach ($arrSrcset as &$srcdesc) {
                     // explode
                     $arrSrcdesc = explode(' ', $srcdesc);
 
                     // must be 2
-                    if (count($arrSrcdesc) == 2)
-                    {
+                    if (2 === \count($arrSrcdesc)) {
                         // download the src
-                        if (null !== ($objFile = $this->downloadFile($arrSrcdesc[0], $strTargetFolder)))
-                        {
+                        if (null !== ($objFile = $this->downloadFile($arrSrcdesc[0], $strTargetFolder))) {
                             // set the new src
-                            $arrSrcdesc[0] = '{{file::'. StringUtil::binToUuid($objFile->uuid) .'}}';
-                        }  
+                            $arrSrcdesc[0] = '{{file::'.StringUtil::binToUuid($objFile->uuid).'}}';
+                        }
                     }
 
                     // set srcdesc again
@@ -461,37 +421,30 @@ class Importer
         }
 
         // return the dom as string
-        return (string)$dom;
+        return (string) $dom;
     }
 
-
     /**
-     * Imports categories for a news item
-     * @param Client $client
+     * Imports categories for a news item.
+     *
      * @param object $objPost
-     * @param NewsModel $objNews
-     * @param NewsArchiveModel $objArchive
-     * @return void
      */
-    protected function importAuthor(Client $client, $objPost, NewsModel $objNews, NewsArchiveModel $objArchive)
+    protected function importAuthor(Client $client, $objPost, NewsModel $objNews, NewsArchiveModel $objArchive): void
     {
-        if (!$objArchive->wpImportAuthors)
-        {
+        if (!$objArchive->wpImportAuthors) {
             return;
         }
 
-        $objAuthor = $this->request($client, self::API_USERS . '/' . $objPost->author);
+        $objAuthor = $this->request($client, self::API_USERS.'/'.$objPost->author);
 
-        if (!$objAuthor)
-        {
+        if (!$objAuthor) {
             return;
         }
 
         // check if there is an existing user
         $objUser = UserModel::findOneByName($objAuthor->name);
 
-        if (null === $objUser)
-        {
+        if (null === $objUser) {
             $objUser = new UserModel();
             $objUser->tstamp = time();
             $objUser->dateAdded = time();
@@ -504,20 +457,15 @@ class Importer
         $objNews->save();
     }
 
-
     /**
-     * Imports categories for a news item
-     * @param Client $client
+     * Imports categories for a news item.
+     *
      * @param object $objPost
-     * @param NewsModel $objNews
-     * @param NewsArchiveModel $objArchive
-     * @return void
      */
-    protected function importCategories(Client $client, $objPost, NewsModel $objNews, NewsArchiveModel $objArchive)
+    protected function importCategories(Client $client, $objPost, NewsModel $objNews, NewsArchiveModel $objArchive): void
     {
         // only import categories if news_categories extension is present
-        if (!in_array('news_categories', array_keys(System::getContainer()->getParameter('kernel.bundles'))))
-        {
+        if (!\in_array('news_categories', array_keys(System::getContainer()->getParameter('kernel.bundles')), true)) {
             return;
         }
 
@@ -525,15 +473,12 @@ class Importer
         $arrCategories = deserialize($objNews->categories, true);
 
         // go through each category
-        foreach ($objPost->categories as $intCategoryId)
-        {
+        foreach ($objPost->categories as $intCategoryId) {
             // import the category
-            if (null !== ($objCategory = $this->importCategory($intCategoryId, $client, $objArchive)))
-            {
+            if (null !== ($objCategory = $this->importCategory($intCategoryId, $client, $objArchive))) {
                 // check if news is not already assigned to category
-                if (!$this->db->fetchAll("SELECT * FROM tl_news_categories WHERE category_id = ? AND news_id = ?", array($objCategory->id, $objNews->id)))
-                {
-                    $this->db->insert('tl_news_categories', array('category_id' => $objCategory->id, 'news_id' => $objNews->id));
+                if (!$this->db->fetchAll('SELECT * FROM tl_news_categories WHERE category_id = ? AND news_id = ?', [$objCategory->id, $objNews->id])) {
+                    $this->db->insert('tl_news_categories', ['category_id' => $objCategory->id, 'news_id' => $objNews->id]);
                 }
 
                 // add to array
@@ -546,22 +491,20 @@ class Importer
         $objNews->save();
     }
 
-
     /**
-     * Imports a category from the API
-     * @param  integer $intCategoryId
-     * @param  Client $client       
-     * @param  object $objPost      
-     * @param  NewsModel $objNews      
-     * @param  NewsArchiveModel $objArchive
-     * @return NewsCategoryModel|null          
+     * Imports a category from the API.
+     *
+     * @param int              $intCategoryId
+     * @param Client           $client
+     * @param NewsArchiveModel $objArchive
+     *
+     * @return NewsCategoryModel|null
      */
     protected function importCategory($intCategoryId, $client, $objArchive)
     {
-        $objWPCategory = $this->request($client, self::API_CATEGORIES . '/' . $intCategoryId);
+        $objWPCategory = $this->request($client, self::API_CATEGORIES.'/'.$intCategoryId);
 
-        if (!$objWPCategory)
-        {
+        if (!$objWPCategory) {
             return null;
         }
 
@@ -572,14 +515,12 @@ class Importer
         $objCategory = NewsCategoryModel::findOneByTitle($strCategoryTitle);
 
         // check if category was not found
-        if (null === $objCategory)
-        {
+        if (null === $objCategory) {
             // determine the parent ID
             $intParent = $objArchive->wpImportCategory ?: 0;
 
             // check if category has a parent
-            if ($objWPCategory->parent)
-            {
+            if ($objWPCategory->parent) {
                 // import the parent
                 $objParent = $this->importCategory($objWPCategory->parent, $client, $objArchive);
 
@@ -602,19 +543,15 @@ class Importer
         return $objCategory;
     }
 
-
     /**
-     * Imports comments for a news item
-     * @param Client $client
+     * Imports comments for a news item.
+     *
      * @param object $objPost
-     * @param NewsModel $objNews
-     * @return void
      */
-    protected function importComments(Client $client, $objPost, NewsModel $objNews)
+    protected function importComments(Client $client, $objPost, NewsModel $objNews): void
     {
         // only import comments, if the ContaoCommentsBundle is available
-        if (!in_array('ContaoCommentsBundle', array_keys(System::getContainer()->getParameter('kernel.bundles'))))
-        {
+        if (!\in_array('ContaoCommentsBundle', array_keys(System::getContainer()->getParameter('kernel.bundles')), true)) {
             return;
         }
 
@@ -622,8 +559,7 @@ class Importer
         $arrComments = $this->request($client, self::API_COMMENTS, ['post' => $objPost->id]);
 
         // go through each comment
-        foreach ($arrComments as $objWPComment)
-        {
+        foreach ($arrComments as $objWPComment) {
             $objComment = new CommentsModel();
             $objComment->tstamp = time();
             $objComment->source = 'tl_news';
@@ -632,7 +568,7 @@ class Importer
             $objComment->name = $objWPComment->author_name;
             $objComment->website = $objWPComment->author_url;
             $objComment->comment = $objWPComment->content->rendered;
-            $objComment->published = ('approved' == $objWPComment->status);
+            $objComment->published = ('approved' === $objWPComment->status);
             $objComment->save();
         }
     }

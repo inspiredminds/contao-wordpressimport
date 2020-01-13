@@ -1,40 +1,47 @@
 <?php
 
-/**
+declare(strict_types=1);
+
+/*
  * This file is part of the WordPressImport Bundle.
  *
  * (c) inspiredminds <https://github.com/inspiredminds>
- *
- * @package   WordPressImportBundle
- * @author    Fritz Michael Gschwantner <https://github.com/fritzmg>
- * @license   LGPL-3.0+
- * @copyright inspiredminds 2017
  */
-
 
 namespace WordPressImportBundle\Command;
 
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use WordPressImportBundle\Service\Importer;
 
-class ImportCommand extends ContainerAwareCommand
+class ImportCommand extends Command
 {
-    protected function configure()
+    protected static $defaultName = 'wordpressimport';
+
+    private $importer;
+
+    public function __construct(Importer $importer)
     {
-    	$this->setName('wordpressimport')
-    	     ->setDescription('Imports all WordPress posts for configured news archives.')
-    	     ->addArgument('limit', InputArgument::OPTIONAL, 'Limit the import to the defined number of items at a time.');
+        parent::__construct();
+        $this->importer = $importer;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function configure(): void
     {
-	    $output->writeln('Starting WordPress import' . ($input->getArgument('limit') ? ' with limit: ' . $input->getArgument('limit') : ''));
+        $this
+             ->setDescription('Imports all WordPress posts for configured news archives.')
+             ->addArgument('limit', InputArgument::OPTIONAL, 'Limit the import to the defined number of items at a time.')
+        ;
+    }
 
-        $importer = $this->getContainer()->get('wordpressimporter');
-        $result = $importer->import($input->getArgument('limit'));
+    protected function execute(InputInterface $input, OutputInterface $output): void
+    {
+        $output->writeln('Starting WordPress import'.($input->getArgument('limit') ? ' with limit: '.$input->getArgument('limit') : ''));
 
-        $output->writeln('Imported ' . count($result) . ' WordPress posts.');
+        $result = $this->importer->import($input->getArgument('limit'));
+
+        $output->writeln('Imported '.\count($result).' WordPress posts.');
     }
 }
