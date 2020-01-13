@@ -12,19 +12,27 @@ namespace WordPressImportBundle\Utils;
 
 use Contao\Config;
 use Contao\System;
+use WordPressImportBundle\Service\Importer;
 
 /**
  * Utility class for Contao Cronjob Hooks.
  */
 class Cron
 {
+    private $importer;
+
+    public function __construct(Importer $importer)
+    {
+        $this->importer = $importer;
+    }
+
     /**
      * Triggers the import via the Contao Cronjob.
      */
     public function import(): void
     {
         try {
-            System::getContainer()->get('wordpressimporter')->import(Config::get('wpImportLimit'), true);
+            $this->importer->import(Config::get('wpImportLimit'), true);
         } catch (\Exception $e) {
             System::log('An error occurred while importing WordPress posts: '.$e->getMessage(), __METHOD__, TL_ERROR);
         }

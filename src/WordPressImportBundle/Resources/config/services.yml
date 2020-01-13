@@ -10,3 +10,8 @@ services:
     wordpressimport_command:
         class: WordPressImportBundle\Command\ImportCommand
         arguments: ['@wordpressimporter']
+
+    wordpressimport_cron:
+        public: true
+        class: WordPressImportBundle\Utils\Cron
+        arguments: ['@wordpressimporter']
