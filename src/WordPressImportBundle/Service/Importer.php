@@ -470,7 +470,7 @@ class Importer
         }
 
         // process the categories
-        $arrCategories = deserialize($objNews->categories, true);
+        $arrCategories = StringUtil::deserialize($objNews->categories, true);
 
         // go through each category
         foreach ($objPost->categories as $intCategoryId) {
