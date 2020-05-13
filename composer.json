@@ -21,10 +21,9 @@
     "require": {
         "contao/core-bundle": "^4.4",
         "guzzlehttp/guzzle": "^6.3",
-        "paquettg/php-html-parser": "^1.7"
+        "paquettg/php-html-parser": "^2.0"
     },
     "require-dev": {
-        "contao/manager-plugin": "^2.0",
         "friendsofphp/php-cs-fixer": "^2.16"
     },
     "autoload": {
