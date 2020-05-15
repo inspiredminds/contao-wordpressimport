@@ -3,6 +3,7 @@
     "description": "Contao 4 bundle that allows you to import news articles from WordPress posts via the WordPress JSON API.",
     "keywords": ["contao", "wordpress", "import", "news"],
     "type": "contao-bundle",
+    "homepage": "https://github.com/inspiredminds/contao-wordpressimport"
     "license": "LGPL-3.0-or-later",
     "authors": [
         {
@@ -13,11 +14,16 @@
         }
     ],
     "support": {
-        "email": "fmg@inspiredminds.at",
         "issues": "https://github.com/inspiredminds/contao-wordpressimport/issues",
         "source": "https://github.com/inspiredminds/contao-wordpressimport",
         "forum": "https://community.contao.org/de"
     },
+    "funding": [
+        {
+            "type": "github",
+            "url": "https://github.com/sponsors/fritzmg"
+        }
+    ],
     "require": {
         "php": ">=7.1",
         "contao/core-bundle": "^4.4",
