@@ -381,7 +381,7 @@ class Importer
         // find all images
         $imgs = $dom->find('img');
 
-        // go throuch each image
+        // go through each image
         foreach ($imgs as $img) {
             // check if image has src
             if ($img->getAttribute('src')) {
@@ -417,6 +417,18 @@ class Importer
 
                 // set srcset
                 $img->setAttribute('srcset', implode(', ', $arrSrcset));
+            }
+
+            // check if surrounded by a link in which case that would be a lightbox
+            if ($img->getParent()->getTag()->name() === 'a' && ($imgUrl = $img->getParent()->getAttribute('href'))) {
+                // download the image
+                if (null !== ($objFile = $this->downloadFile($imgUrl, $strTargetFolder))) {
+
+                    // set the new src
+                    $img->getParent()->setAttribute('href', '{{file::'.StringUtil::binToUuid($objFile->uuid).'}}');
+                    // mark it as lightbox
+                    $img->getParent()->setAttribute('data-lightbox', 'true');
+                }
             }
         }
 
