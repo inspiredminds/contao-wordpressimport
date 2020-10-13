@@ -28,6 +28,7 @@ class Plugin implements BundlePluginInterface
             BundleConfig::create('WordPressImportBundle\WordPressImportBundle')
                 ->setLoadAfter([
                     'Contao\CoreBundle\ContaoCoreBundle',
+                    'Contao\NewsBundle\ContaoNewsBundle',
                     'news_categories',
                 ]),
         ];
