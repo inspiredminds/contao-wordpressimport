@@ -208,11 +208,6 @@ class Importer
             return;
         }
 
-        // check if post already exists (skip)
-        if (NewsModel::countBy(['wpPostId = ?', 'pid = ?'], [$objPost->id, $objArchive->id]) > 0) {
-            return;
-        }
-
         // get the target folder
         $strTargetFolder = FilesModel::findOneByUuid($objArchive->wpImportFolder)->path;
 
