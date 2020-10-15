@@ -208,11 +208,6 @@ class Importer
             return;
         }
 
-        // check if post already exists (skip)
-        if (NewsModel::countBy(['wpPostId = ?', 'pid = ?'], [$objPost->id, $objArchive->id]) > 0) {
-            return;
-        }
-
         // get the target folder
         $strTargetFolder = FilesModel::findOneByUuid($objArchive->wpImportFolder)->path;
 
@@ -240,7 +235,7 @@ class Importer
         $objNews->save();
 
         // import the teaser image
-        $this->importImage($client, $objPost, $objNews, $objArchive);
+        $this->importImage($client, $objPost, $objNews, $objArchive, $strTargetFolder);
 
         // import the detail text
         if ($objPost->content && $objPost->content->rendered) {
@@ -266,12 +261,32 @@ class Importer
 
     /**
      * Downloads the featured_media of the post and adds as a teaser image.
-     *
-     * @param object $objPost
+     * If it does not exist, it takes the first image from the content.
      */
-    protected function importImage(Client $client, $objPost, NewsModel $objNews, NewsArchiveModel $objArchive): void
+    protected function importImage(Client $client, $objPost, NewsModel $objNews, NewsArchiveModel $objArchive, $strTargetFolder): void
     {
         if (!$objPost->featured_media) {
+
+            // no explicit teaser image defined, take the first from the content
+            $dom = new \PHPHtmlParser\Dom();
+            $dom->load($objPost->content->rendered);
+
+            // find the first image
+            $img = $dom->find('img', 0);
+
+            if (!$img) {
+                return;
+            }
+
+            // download
+            $objFile = $this->downloadFile($img->getAttribute('src'), $strTargetFolder);
+
+            // check if file exists
+            if ($objFile) {
+                $objNews->addImage = '1';
+                $objNews->singleSRC = $objFile->uuid;
+                $objNews->save();
+            }
             return;
         }
 
@@ -284,9 +299,6 @@ class Importer
         if ('image' !== $objMedia->media_type) {
             return;
         }
-
-        // get the target folder
-        $strTargetFolder = FilesModel::findOneByUuid($objArchive->wpImportFolder)->path;
 
         // download
         $objFile = $this->downloadFile($objMedia->source_url, $strTargetFolder);
@@ -381,7 +393,7 @@ class Importer
         // find all images
         $imgs = $dom->find('img');
 
-        // go throuch each image
+        // go through each image
         foreach ($imgs as $img) {
             // check if image has src
             if ($img->getAttribute('src')) {
@@ -417,6 +429,18 @@ class Importer
 
                 // set srcset
                 $img->setAttribute('srcset', implode(', ', $arrSrcset));
+            }
+
+            // check if surrounded by a link in which case that would be a lightbox
+            if ($img->getParent()->getTag()->name() === 'a' && ($imgUrl = $img->getParent()->getAttribute('href'))) {
+                // download the image
+                if (null !== ($objFile = $this->downloadFile($imgUrl, $strTargetFolder))) {
+
+                    // set the new src
+                    $img->getParent()->setAttribute('href', '{{file::'.StringUtil::binToUuid($objFile->uuid).'}}');
+                    // mark it as lightbox
+                    $img->getParent()->setAttribute('data-lightbox', 'true');
+                }
             }
         }
 
