@@ -18,12 +18,18 @@ use Contao\Dbafs;
 use Contao\FilesModel;
 use Contao\NewsArchiveModel;
 use Contao\NewsModel;
+use Contao\PageModel;
 use Contao\StringUtil;
 use Contao\System;
 use Contao\UserModel;
 use Doctrine\DBAL\Connection;
 use GuzzleHttp\Client;
 use NewsCategories\NewsCategoryModel;
+use Nyholm\Psr7\Uri;
+use PHPHtmlParser\Dom\HtmlNode;
+use PHPHtmlParser\Exceptions\ChildNotFoundException;
+use Webmozart\PathUtil\Path;
+use Webmozart\PathUtil\Url;
 
 class Importer
 {
@@ -218,7 +224,7 @@ class Importer
         $objNews->date = strtotime($objPost->date_gmt);
         $objNews->time = strtotime($objPost->date_gmt);
         $objNews->published = (('publish' === $objPost->status) ? '1' : '');
-        $objNews->teaser = $this->processHtml($objPost->excerpt->rendered, $strTargetFolder);
+        $objNews->teaser = $this->processHtml($objPost->excerpt->rendered, $strTargetFolder, $objArchive);
         $objNews->headline = strip_tags($objPost->title->rendered);
         $objNews->source = 'default';
         $objNews->floating = 'above';
@@ -245,7 +251,7 @@ class Importer
             $objContent->tstamp = time();
             $objContent->pid = $objNews->id;
             $objContent->type = 'text';
-            $objContent->text = $this->processHtml($objPost->content->rendered, $strTargetFolder);
+            $objContent->text = $this->processHtml($objPost->content->rendered, $strTargetFolder, $objArchive);
             $objContent->save();
         }
 
@@ -305,6 +311,32 @@ class Importer
 
         // check if file exists
         if ($objFile) {
+            // check meta-information
+            $meta = [];
+            $language = 'en';
+            
+            /** @var PageModel $page */
+            if (null !== ($page = $objArchive->getRelated('jumpTo'))) {
+                $language = $page->loadDetails()->language;
+            } 
+
+            if ($title = strip_tags($objMedia->title->rendered)) {
+                $meta[$language]['title'] = $title;
+            }
+
+            if ($caption = strip_tags($objMedia->caption->rendered)) {
+                $meta[$language]['caption'] = $caption;
+            }
+
+            if ($objMedia->alt_text) {
+                $meta[$language]['alt'] = $objMedia->alt_text;
+            }
+
+            if (!empty($meta)) {
+                $objFile->meta = $meta;
+                $objFile->save();
+            }
+
             $objNews->addImage = '1';
             $objNews->singleSRC = $objFile->uuid;
             $objNews->save();
@@ -375,13 +407,13 @@ class Importer
 
     /**
      * Processes the text and looks for any src and srcset attributes,
-     * downloads the images and replacs them with {{file::*}} insert tags.
+     * downloads the images and replaces them with {{file::*}} insert tags.
      *
      * @param string $strText
      *
      * @return string
      */
-    protected function processHtml($strText, $strTargetFolder)
+    protected function processHtml($strText, $strTargetFolder, NewsArchiveModel $archive)
     {
         // strip tags to certain allowed tags
         $strText = strip_tags($strText, Config::get('allowedTags'));
@@ -394,13 +426,41 @@ class Importer
         $imgs = $dom->find('img');
 
         // go through each image
+        /** @var HtmlNode $img */
         foreach ($imgs as $img) {
+            // check meta-information
+			$meta = array();
+            $language = 'en';
+            
+            /** @var PageModel $page */
+            if (null !== ($page = $archive->getRelated('jumpTo'))) {
+                $language = $page->loadDetails()->language;
+            }
+
+			if ($alt = $img->getAttribute('alt')) {
+				$meta[$language]['alt'] = $alt;
+			}
+
+			if ($title = $img->getAttribute('title')) {
+				$meta[$language]['title'] = $title;
+			}
+
+            if ($caption = $this->getCaption($img)) {
+                $meta[$language]['caption'] = $caption;
+            }
+
             // check if image has src
             if ($img->getAttribute('src')) {
                 // download the src
                 if (null !== ($objFile = $this->downloadFile($img->getAttribute('src'), $strTargetFolder))) {
                     // set insert tags
                     $img->setAttribute('src', '{{file::'.StringUtil::binToUuid($objFile->uuid).'}}');
+
+                    // save meta info
+					if (!empty($meta)) {
+						$objFile->meta = $meta;
+						$objFile->save();
+					}
                 }
             }
 
@@ -420,6 +480,12 @@ class Importer
                         if (null !== ($objFile = $this->downloadFile($arrSrcdesc[0], $strTargetFolder))) {
                             // set the new src
                             $arrSrcdesc[0] = '{{file::'.StringUtil::binToUuid($objFile->uuid).'}}';
+
+                            // save meta info
+                            if (!empty($meta)) {
+                                $objFile->meta = $meta;
+                                $objFile->save();
+                            }
                         }
                     }
 
@@ -435,12 +501,46 @@ class Importer
             if ($img->getParent()->getTag()->name() === 'a' && ($imgUrl = $img->getParent()->getAttribute('href'))) {
                 // download the image
                 if (null !== ($objFile = $this->downloadFile($imgUrl, $strTargetFolder))) {
-
                     // set the new src
                     $img->getParent()->setAttribute('href', '{{file::'.StringUtil::binToUuid($objFile->uuid).'}}');
+
                     // mark it as lightbox
                     $img->getParent()->setAttribute('data-lightbox', 'true');
                 }
+            }
+        }
+
+        // find all links
+        $links = $dom->find('a');
+        $wpHost = (new Uri($archive->wpImportUrl))->getHost();
+
+        // go through each link
+        /** @var HtmlNode $link */
+        foreach ($links as $link) {
+            $href = $link->getAttribute('href');
+
+            if (empty($href)) {
+                continue;
+            }
+
+            $host = (new Uri($href))->getHost();
+
+            // ignore links that are not on the same host
+            if ($host !== $wpHost) {
+                continue;
+            }
+
+            $ext = strtolower(pathinfo($href, PATHINFO_EXTENSION));
+            $validExts = explode(',', Config::get('allowedDownload'));
+
+            // ignore unallowed download file extensions
+            if (!\in_array($ext, $validExts, true)) {
+                continue;
+            }
+
+            // download the linked file
+            if (null !== ($file = $this->downloadFile($href, $strTargetFolder))) {
+                $link->setAttribute('href', '{{file::'. StringUtil::binToUuid($file->uuid) .'}}');
             }
         }
 
@@ -595,5 +695,38 @@ class Importer
             $objComment->published = ('approved' === $objWPComment->status);
             $objComment->save();
         }
+    }
+
+    /**
+     * Returns the caption for a given <img>
+     */
+    private function getCaption(HtmlNode $img): ?string
+    {
+        if ('img' !== $img->getTag()) {
+            return null;
+        }
+
+        $parent = $img->getParent();
+        $count = 0;
+
+        while ('figure' !== $parent->getTag() && $count < 3) {
+            $parent = $parent->getParent();
+            ++$count;
+        }
+
+        if ('figure' !== $parent->getTag()) {
+            return null;
+        }
+
+        try { 
+            /** @var HtmlNode $caption */
+            if ($caption = $parent->find('figcaption', 0)) {
+                return $caption->text();
+            }
+        } catch (ChildNotFoundException $e) {
+            // ignore
+        }
+
+        return null;
     }
 }
