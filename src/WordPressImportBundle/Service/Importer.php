@@ -28,8 +28,6 @@ use NewsCategories\NewsCategoryModel;
 use Nyholm\Psr7\Uri;
 use PHPHtmlParser\Dom\HtmlNode;
 use PHPHtmlParser\Exceptions\ChildNotFoundException;
-use Webmozart\PathUtil\Path;
-use Webmozart\PathUtil\Url;
 
 class Importer
 {
@@ -221,8 +219,8 @@ class Importer
         $objNews = new NewsModel();
         $objNews->pid = $objArchive->id;
         $objNews->tstamp = time();
-        $objNews->date = strtotime($objPost->date_gmt);
-        $objNews->time = strtotime($objPost->date_gmt);
+        $objNews->date = (new \DateTime($objPost->date_gmt, new \DateTimeZone('UTC')))->getTimestamp();
+        $objNews->time = $objNews->date;
         $objNews->published = (('publish' === $objPost->status) ? '1' : '');
         $objNews->teaser = $this->processHtml($objPost->excerpt->rendered, $strTargetFolder, $objArchive);
         $objNews->headline = strip_tags($objPost->title->rendered);
@@ -312,13 +310,13 @@ class Importer
         // check if file exists
         if ($objFile) {
             // check meta-information
-            $meta = [];
+            $meta = StringUtil::deserialize($objFile->meta, true);
             $language = 'en';
             
             /** @var PageModel $page */
             if (null !== ($page = $objArchive->getRelated('jumpTo'))) {
                 $language = $page->loadDetails()->language;
-            } 
+            }
 
             if ($title = strip_tags($objMedia->title->rendered)) {
                 $meta[$language]['title'] = $title;
@@ -425,17 +423,19 @@ class Importer
         // find all images
         $imgs = $dom->find('img');
 
+        // determine language
+        $language = 'en';
+
+        /** @var PageModel $page */
+        if (null !== ($page = $archive->getRelated('jumpTo'))) {
+            $language = $page->loadDetails()->language;
+        }
+
         // go through each image
         /** @var HtmlNode $img */
         foreach ($imgs as $img) {
             // check meta-information
-			$meta = array();
-            $language = 'en';
-            
-            /** @var PageModel $page */
-            if (null !== ($page = $archive->getRelated('jumpTo'))) {
-                $language = $page->loadDetails()->language;
-            }
+			$meta = [];
 
 			if ($alt = $img->getAttribute('alt')) {
 				$meta[$language]['alt'] = $alt;
@@ -458,7 +458,9 @@ class Importer
 
                     // save meta info
 					if (!empty($meta)) {
-						$objFile->meta = $meta;
+                        $originalMeta = StringUtil::deserialize($objFile->meta, true);
+                        $originalMeta[$language] = array_merge($originalMeta[$language] ?? [], $meta[$language]);
+						$objFile->meta = $originalMeta;
 						$objFile->save();
 					}
                 }
@@ -483,7 +485,9 @@ class Importer
 
                             // save meta info
                             if (!empty($meta)) {
-                                $objFile->meta = $meta;
+                                $originalMeta = StringUtil::deserialize($objFile->meta, true);
+                                $originalMeta[$language] = array_merge($originalMeta[$language] ?? [], $meta[$language]);
+                                $objFile->meta = $originalMeta;
                                 $objFile->save();
                             }
                         }
@@ -688,7 +692,7 @@ class Importer
             $objComment->tstamp = time();
             $objComment->source = 'tl_news';
             $objComment->parent = $objNews->id;
-            $objComment->date = strtotime($objWPComment->date_gmt);
+            $objComment->date = (new \DateTime($objWPComment->date_gmt, new \DateTimeZone('UTC')))->getTimestamp();
             $objComment->name = $objWPComment->author_name;
             $objComment->website = $objWPComment->author_url;
             $objComment->comment = $objWPComment->content->rendered;
