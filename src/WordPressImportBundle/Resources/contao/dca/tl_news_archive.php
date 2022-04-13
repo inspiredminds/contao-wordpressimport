@@ -8,7 +8,9 @@ declare(strict_types=1);
  * (c) inspiredminds <https://github.com/inspiredminds>
  */
 
-use Contao\System;
+use Codefog\NewsCategoriesBundle\CodefogNewsCategoriesBundle;
+use Contao\CommentsBundle\ContaoCommentsBundle;
+use Contao\CoreBundle\DataContainer\PaletteManipulator;
 
 $GLOBALS['TL_DCA']['tl_news_archive']['palettes']['default'] .= ';{wordpress_import:hide},wpImport';
 $GLOBALS['TL_DCA']['tl_news_archive']['palettes']['__selector__'][] = 'wpImport';
@@ -66,20 +68,23 @@ $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImportCron'] = [
     'sql' => "char(1) NOT NULL default ''",
 ];
 
-if (\in_array('news_categories', array_keys(System::getContainer()->getParameter('kernel.bundles')), true)) {
-    $GLOBALS['TL_DCA']['tl_news_archive']['subpalettes']['wpImport'] = str_replace(',wpImportFolder', ',wpImportFolder,wpImportCategory', $GLOBALS['TL_DCA']['tl_news_archive']['subpalettes']['wpImport']);
+if (class_exists(CodefogNewsCategoriesBundle::class)) {
     $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImportCategory'] = [
         'label' => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportCategory'],
         'exclude' => true,
-        'inputType' => 'treePicker',
+        'inputType' => 'newsCategoriesPicker',
         'foreignKey' => 'tl_news_category.title',
         'eval' => ['multiple' => false, 'fieldType' => 'radio', 'foreignTable' => 'tl_news_category', 'titleField' => 'title', 'searchField' => 'title', 'managerHref' => 'do=news&table=tl_news_category'],
         'sql' => "int(10) unsigned NOT NULL default '0'",
     ];
+
+    PaletteManipulator::create()
+        ->addField('wpImportCategory', 'wpImportFolder', PaletteManipulator::POSITION_AFTER)
+        ->applyToSubpalette('wpImport', 'tl_news_archive')
+    ;
 }
 
-if (\in_array('ContaoCommentsBundle', array_keys(System::getContainer()->getParameter('kernel.bundles')), true)) {
-    $GLOBALS['TL_DCA']['tl_news_archive']['subpalettes']['wpImport'] = str_replace(',wpImportAuthors', ',wpImportAuthors,wpImportComments', $GLOBALS['TL_DCA']['tl_news_archive']['subpalettes']['wpImport']);
+if (class_exists(ContaoCommentsBundle::class)) {
     $GLOBALS['TL_DCA']['tl_news_archive']['fields']['wpImportComments'] = [
         'label' => &$GLOBALS['TL_LANG']['tl_news_archive']['wpImportComments'],
         'exclude' => true,
@@ -87,4 +92,9 @@ if (\in_array('ContaoCommentsBundle', array_keys(System::getContainer()->getPara
         'eval' => ['tl_class' => 'w50'],
         'sql' => "char(1) NOT NULL default ''",
     ];
+
+    PaletteManipulator::create()
+        ->addField('wpImportComments', 'wpImportAuthors', PaletteManipulator::POSITION_AFTER)
+        ->applyToSubpalette('wpImport', 'tl_news_archive')
+    ;
 }

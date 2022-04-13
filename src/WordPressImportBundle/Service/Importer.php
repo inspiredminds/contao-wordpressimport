@@ -10,6 +10,8 @@ declare(strict_types=1);
 
 namespace WordPressImportBundle\Service;
 
+use Codefog\NewsCategoriesBundle\CodefogNewsCategoriesBundle;
+use Codefog\NewsCategoriesBundle\Model\NewsCategoryModel;
 use Contao\CommentsModel;
 use Contao\Config;
 use Contao\ContentModel;
@@ -24,7 +26,6 @@ use Contao\System;
 use Contao\UserModel;
 use Doctrine\DBAL\Connection;
 use GuzzleHttp\Client;
-use NewsCategories\NewsCategoryModel;
 use Nyholm\Psr7\Uri;
 use PHPHtmlParser\Dom\HtmlNode;
 use PHPHtmlParser\Exceptions\ChildNotFoundException;
@@ -593,7 +594,7 @@ class Importer
     protected function importCategories(Client $client, $objPost, NewsModel $objNews, NewsArchiveModel $objArchive): void
     {
         // only import categories if news_categories extension is present
-        if (!\in_array('news_categories', array_keys(System::getContainer()->getParameter('kernel.bundles')), true)) {
+        if (!class_exists(CodefogNewsCategoriesBundle::class)) {
             return;
         }
 
@@ -605,7 +606,7 @@ class Importer
             // import the category
             if (null !== ($objCategory = $this->importCategory($intCategoryId, $client, $objArchive))) {
                 // check if news is not already assigned to category
-                if (!$this->db->fetchAll('SELECT * FROM tl_news_categories WHERE category_id = ? AND news_id = ?', [$objCategory->id, $objNews->id])) {
+                if (!$this->db->fetchAllAssociative('SELECT * FROM tl_news_categories WHERE category_id = ? AND news_id = ?', [$objCategory->id, $objNews->id])) {
                     $this->db->insert('tl_news_categories', ['category_id' => $objCategory->id, 'news_id' => $objNews->id]);
                 }
 
@@ -662,7 +663,7 @@ class Importer
             $objCategory->sorting = 128;
             $objCategory->pid = $intParent;
             $objCategory->tstamp = time();
-            $objCategory->alias = StringUtil::generateAlias($strCategoryTitle);
+            $objCategory->alias = $objWPCategory->slug;
             $objCategory->published = '1';
             $objCategory->save();
         }

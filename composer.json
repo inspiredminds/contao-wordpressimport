@@ -50,5 +50,8 @@
         "allow-plugins": {
             "contao-components/installer": true
         }
+    },
+    "suggest": {
+        "codefog/contao-news_categories": "Allows to import news categories from WordPress as well."
     }
 }
