@@ -27,6 +27,7 @@
     "require": {
         "php": ">=7.1",
         "contao/core-bundle": "^4.4",
+        "doctrine/dbal": "^2.11 || ^3.0",
         "guzzlehttp/guzzle": "^6.3",
         "nyholm/psr7": "^1.2",
         "paquettg/php-html-parser": "^2.0",
