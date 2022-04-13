@@ -6,13 +6,13 @@ This file is part of the WordPressImport Bundle.
 (c) inspiredminds <https://github.com/inspiredminds>
 EOF;
 
-$finder = PhpCsFixer\Finder::create()
+$finder = (new PhpCsFixer\Finder())
     ->in([
         __DIR__.'/src',
     ])
 ;
 
-return PhpCsFixer\Config::create()
+return (new PhpCsFixer\Config())
     ->setRules([
         '@Symfony' => true,
         '@Symfony:risky' => true,
@@ -29,9 +29,11 @@ return PhpCsFixer\Config::create()
         'escape_implicit_backslashes' => true,
         'fully_qualified_strict_types' => true,
         'general_phpdoc_annotation_remove' => [
-            'author',
-            'expectedException',
-            'expectedExceptionMessage',
+            'annotations' => [
+                'author',
+                'expectedException',
+                'expectedExceptionMessage',
+            ],
         ],
         'header_comment' => ['header' => $header],
         'heredoc_to_nowdoc' => true,

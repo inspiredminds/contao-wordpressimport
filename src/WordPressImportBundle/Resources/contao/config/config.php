@@ -8,7 +8,7 @@ declare(strict_types=1);
  * (c) inspiredminds <https://github.com/inspiredminds>
  */
 
-/**
+/*
  * Register Cronjobs.
  */
 $GLOBALS['TL_CRON']['hourly'][] = ['wordpressimport_cron', 'import'];

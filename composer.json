@@ -40,5 +40,10 @@
     },
     "extra": {
         "contao-manager-plugin": "WordPressImportBundle\\ContaoManager\\Plugin"
+    },
+    "config": {
+        "allow-plugins": {
+            "contao-components/installer": true
+        }
     }
 }

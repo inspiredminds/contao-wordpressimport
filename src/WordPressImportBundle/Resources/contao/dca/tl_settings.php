@@ -8,7 +8,7 @@ declare(strict_types=1);
  * (c) inspiredminds <https://github.com/inspiredminds>
  */
 
-/**
+/*
  * Palettes.
  */
 $GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wordpressimport_legend:hide},wpImportLimit';

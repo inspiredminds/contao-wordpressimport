@@ -203,7 +203,7 @@ class Importer
     }
 
     /**
-     * Imports the categories for the news object.
+     * Imports a news item.
      */
     protected function importNews(Client $client, $objPost, NewsArchiveModel $objArchive): void
     {
@@ -270,7 +270,6 @@ class Importer
     protected function importImage(Client $client, $objPost, NewsModel $objNews, NewsArchiveModel $objArchive, $strTargetFolder): void
     {
         if (!$objPost->featured_media) {
-
             // no explicit teaser image defined, take the first from the content
             $dom = new \PHPHtmlParser\Dom();
             $dom->load($objPost->content->rendered);
@@ -291,6 +290,7 @@ class Importer
                 $objNews->singleSRC = $objFile->uuid;
                 $objNews->save();
             }
+
             return;
         }
 
@@ -312,7 +312,7 @@ class Importer
             // check meta-information
             $meta = StringUtil::deserialize($objFile->meta, true);
             $language = 'en';
-            
+
             /** @var PageModel $page */
             if (null !== ($page = $objArchive->getRelated('jumpTo'))) {
                 $language = $page->loadDetails()->language;
@@ -435,15 +435,15 @@ class Importer
         /** @var HtmlNode $img */
         foreach ($imgs as $img) {
             // check meta-information
-			$meta = [];
+            $meta = [];
 
-			if ($alt = $img->getAttribute('alt')) {
-				$meta[$language]['alt'] = $alt;
-			}
+            if ($alt = $img->getAttribute('alt')) {
+                $meta[$language]['alt'] = $alt;
+            }
 
-			if ($title = $img->getAttribute('title')) {
-				$meta[$language]['title'] = $title;
-			}
+            if ($title = $img->getAttribute('title')) {
+                $meta[$language]['title'] = $title;
+            }
 
             if ($caption = $this->getCaption($img)) {
                 $meta[$language]['caption'] = $caption;
@@ -457,12 +457,12 @@ class Importer
                     $img->setAttribute('src', '{{file::'.StringUtil::binToUuid($objFile->uuid).'}}');
 
                     // save meta info
-					if (!empty($meta)) {
+                    if (!empty($meta)) {
                         $originalMeta = StringUtil::deserialize($objFile->meta, true);
                         $originalMeta[$language] = array_merge($originalMeta[$language] ?? [], $meta[$language]);
-						$objFile->meta = $originalMeta;
-						$objFile->save();
-					}
+                        $objFile->meta = $originalMeta;
+                        $objFile->save();
+                    }
                 }
             }
 
@@ -502,7 +502,7 @@ class Importer
             }
 
             // check if surrounded by a link in which case that would be a lightbox
-            if ($img->getParent()->getTag()->name() === 'a' && ($imgUrl = $img->getParent()->getAttribute('href'))) {
+            if ('a' === $img->getParent()->getTag()->name() && ($imgUrl = $img->getParent()->getAttribute('href'))) {
                 // download the image
                 if (null !== ($objFile = $this->downloadFile($imgUrl, $strTargetFolder))) {
                     // set the new src
@@ -534,7 +534,7 @@ class Importer
                 continue;
             }
 
-            $ext = strtolower(pathinfo($href, PATHINFO_EXTENSION));
+            $ext = strtolower(pathinfo($href, \PATHINFO_EXTENSION));
             $validExts = explode(',', Config::get('allowedDownload'));
 
             // ignore unallowed download file extensions
@@ -544,7 +544,7 @@ class Importer
 
             // download the linked file
             if (null !== ($file = $this->downloadFile($href, $strTargetFolder))) {
-                $link->setAttribute('href', '{{file::'. StringUtil::binToUuid($file->uuid) .'}}');
+                $link->setAttribute('href', '{{file::'.StringUtil::binToUuid($file->uuid).'}}');
             }
         }
 
@@ -702,7 +702,7 @@ class Importer
     }
 
     /**
-     * Returns the caption for a given <img>
+     * Returns the caption for a given <img>.
      */
     private function getCaption(HtmlNode $img): ?string
     {
@@ -722,7 +722,7 @@ class Importer
             return null;
         }
 
-        try { 
+        try {
             /** @var HtmlNode $caption */
             if ($caption = $parent->find('figcaption', 0)) {
                 return $caption->text();
