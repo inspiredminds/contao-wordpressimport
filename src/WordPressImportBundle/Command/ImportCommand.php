@@ -36,12 +36,14 @@ class ImportCommand extends Command
         ;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln('Starting WordPress import'.($input->getArgument('limit') ? ' with limit: '.$input->getArgument('limit') : ''));
 
         $result = $this->importer->import($input->getArgument('limit'));
 
         $output->writeln('Imported '.\count($result).' WordPress posts.');
+        
+        return 0;
     }
 }
