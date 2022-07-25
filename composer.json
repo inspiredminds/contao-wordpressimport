@@ -26,15 +26,15 @@
     ],
     "require": {
         "php": ">=7.1",
-        "contao/core-bundle": "^4.4",
+        "contao/core-bundle": "^4.9",
         "doctrine/dbal": "^2.11 || ^3.0",
         "guzzlehttp/guzzle": "^6.3",
         "nyholm/psr7": "^1.2",
         "paquettg/php-html-parser": "^2.0",
-        "symfony/config": "^3.4 || ^4.4 || ^5.0 || ^6.0",
-        "symfony/console": "^3.4 || ^4.4 || ^5.0 || ^6.0",
-        "symfony/dependency-injection": "^3.4 || ^4.4 || ^5.0 || ^6.0",
-        "symfony/http-kernel": "^3.4 || ^4.4 || ^5.0 || ^6.0"
+        "symfony/config": "^4.4 || ^5.0 || ^6.0",
+        "symfony/console": "^4.4 || ^5.0 || ^6.0",
+        "symfony/dependency-injection": "^4.4 || ^5.0 || ^6.0",
+        "symfony/http-kernel": "^4.4 || ^5.0 || ^6.0"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^2.16"
