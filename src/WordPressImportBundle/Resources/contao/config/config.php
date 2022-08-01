@@ -9,11 +9,6 @@ declare(strict_types=1);
  */
 
 /*
- * Register Cronjobs.
- */
-$GLOBALS['TL_CRON']['hourly'][] = ['wordpressimport_cron', 'import'];
-
-/*
  * Default config
  */
 $GLOBALS['TL_CONFIG']['wpImportLimit'] = 10;

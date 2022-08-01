@@ -43,7 +43,7 @@ class ImportCommand extends Command
         $result = $this->importer->import($input->getArgument('limit'));
 
         $output->writeln('Imported '.\count($result).' WordPress posts.');
-        
+
         return 0;
     }
 }

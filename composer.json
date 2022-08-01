@@ -26,9 +26,9 @@
     ],
     "require": {
         "php": ">=7.1",
-        "contao/core-bundle": "^4.9",
+        "contao/core-bundle": "^4.9 || ^5.0",
         "doctrine/dbal": "^2.11 || ^3.0",
-        "guzzlehttp/guzzle": "^6.3",
+        "guzzlehttp/guzzle": "^6.3 || ^7.0",
         "nyholm/psr7": "^1.2",
         "paquettg/php-html-parser": "^2.0",
         "symfony/config": "^4.4 || ^5.0 || ^6.0",

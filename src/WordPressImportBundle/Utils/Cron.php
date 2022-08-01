@@ -11,7 +11,9 @@ declare(strict_types=1);
 namespace WordPressImportBundle\Utils;
 
 use Contao\Config;
-use Contao\System;
+use Contao\CoreBundle\Monolog\ContaoContext;
+use Contao\CoreBundle\ServiceAnnotation\CronJob;
+use Psr\Log\LoggerInterface;
 use WordPressImportBundle\Service\Importer;
 
 /**
@@ -20,21 +22,25 @@ use WordPressImportBundle\Service\Importer;
 class Cron
 {
     private $importer;
+    private $logger;
 
-    public function __construct(Importer $importer)
+    public function __construct(Importer $importer, LoggerInterface $logger)
     {
         $this->importer = $importer;
+        $this->logger = $logger;
     }
 
     /**
      * Triggers the import via the Contao Cronjob.
+     *
+     * @CronJob("hourly")
      */
     public function import(): void
     {
         try {
             $this->importer->import(Config::get('wpImportLimit'), true);
         } catch (\Exception $e) {
-            System::log('An error occurred while importing WordPress posts: '.$e->getMessage(), __METHOD__, TL_ERROR);
+            $this->logger->info('An error occurred while importing WordPress posts: '.$e->getMessage(), ['contao' => new ContaoContext(__METHOD__, ContaoContext::ERROR)]);
         }
     }
 }

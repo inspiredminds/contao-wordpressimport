@@ -14,4 +14,4 @@ services:
     wordpressimport_cron:
         public: true
         class: WordPressImportBundle\Utils\Cron
-        arguments: ['@wordpressimporter']
+        arguments: ['@wordpressimporter', '@logger']
