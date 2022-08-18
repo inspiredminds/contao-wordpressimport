@@ -26,6 +26,7 @@ use Contao\System;
 use Contao\UserModel;
 use Doctrine\DBAL\Connection;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ClientException;
 use Nyholm\Psr7\Uri;
 use PHPHtmlParser\Dom\HtmlNode;
 use PHPHtmlParser\Exceptions\ChildNotFoundException;
@@ -239,29 +240,36 @@ class Importer
         // save the news
         $objNews->save();
 
-        // import the teaser image
-        $this->importImage($client, $objPost, $objNews, $objArchive, $strTargetFolder);
+        try {
+            // import the teaser image
+            $this->importImage($client, $objPost, $objNews, $objArchive, $strTargetFolder);
 
-        // import the detail text
-        if ($objPost->content && $objPost->content->rendered) {
-            $objContent = new ContentModel();
-            $objContent->ptable = NewsModel::getTable();
-            $objContent->sorting = 128;
-            $objContent->tstamp = time();
-            $objContent->pid = $objNews->id;
-            $objContent->type = 'text';
-            $objContent->text = $this->processHtml($objPost->content->rendered, $strTargetFolder, $objArchive);
-            $objContent->save();
+            // import the detail text
+            if ($objPost->content && $objPost->content->rendered) {
+                $objContent = new ContentModel();
+                $objContent->ptable = NewsModel::getTable();
+                $objContent->sorting = 128;
+                $objContent->tstamp = time();
+                $objContent->pid = $objNews->id;
+                $objContent->type = 'text';
+                $objContent->text = $this->processHtml($objPost->content->rendered, $strTargetFolder, $objArchive);
+                $objContent->save();
+            }
+
+            // import the categories
+            $this->importCategories($client, $objPost, $objNews, $objArchive);
+
+            // import the authors
+            $this->importAuthor($client, $objPost, $objNews, $objArchive);
+
+            // import comments
+            $this->importComments($client, $objPost, $objNews, $objArchive);
+        } catch (\Exception $e) {
+            // Delete in case of error
+            $objNews->delete();
+
+            throw $e;
         }
-
-        // import the categories
-        $this->importCategories($client, $objPost, $objNews, $objArchive);
-
-        // import the authors
-        $this->importAuthor($client, $objPost, $objNews, $objArchive);
-
-        // import comments
-        $this->importComments($client, $objPost, $objNews);
     }
 
     /**
@@ -270,72 +278,70 @@ class Importer
      */
     protected function importImage(Client $client, $objPost, NewsModel $objNews, NewsArchiveModel $objArchive, $strTargetFolder): void
     {
-        if (!$objPost->featured_media) {
-            // no explicit teaser image defined, take the first from the content
-            $dom = new \PHPHtmlParser\Dom();
-            $dom->load($objPost->content->rendered);
-
-            // find the first image
-            $img = $dom->find('img', 0);
-
-            if (!$img) {
-                return;
+        if (!empty($objPost->featured_media)) {
+            try {
+                $objMedia = $this->request($client, self::API_MEDIA.'/'.$objPost->featured_media);
+            } catch (ClientException $e) {
+                $objMedia = null;
             }
 
-            // download
-            $objFile = $this->downloadFile($img->getAttribute('src'), $strTargetFolder);
+            if ($objMedia && 'image' === $objMedia->media_type) {
+                // Download
+                $objFile = $this->downloadFile($objMedia->source_url, $strTargetFolder);
 
-            // check if file exists
-            if ($objFile) {
-                $objNews->addImage = '1';
-                $objNews->singleSRC = $objFile->uuid;
-                $objNews->save();
+                // Check if file exists
+                if ($objFile) {
+                    // Check meta-information
+                    $meta = StringUtil::deserialize($objFile->meta, true);
+                    $language = 'en';
+
+                    /** @var PageModel $page */
+                    if (null !== ($page = $objArchive->getRelated('jumpTo'))) {
+                        $language = $page->loadDetails()->language;
+                    }
+
+                    if ($title = strip_tags($objMedia->title->rendered)) {
+                        $meta[$language]['title'] = $title;
+                    }
+
+                    if ($caption = strip_tags($objMedia->caption->rendered)) {
+                        $meta[$language]['caption'] = $caption;
+                    }
+
+                    if ($objMedia->alt_text) {
+                        $meta[$language]['alt'] = $objMedia->alt_text;
+                    }
+
+                    if (!empty($meta)) {
+                        $objFile->meta = $meta;
+                        $objFile->save();
+                    }
+
+                    $objNews->addImage = '1';
+                    $objNews->singleSRC = $objFile->uuid;
+                    $objNews->save();
+
+                    return;
+                }
             }
-
-            return;
         }
 
-        $objMedia = $this->request($client, self::API_MEDIA.'/'.$objPost->featured_media);
+        // No explicit teaser image defined, take the first from the content
+        $dom = new \PHPHtmlParser\Dom();
+        $dom->load($objPost->content->rendered);
 
-        if (!$objMedia) {
-            return;
-        }
+        // find the first image
+        $img = $dom->find('img', 0);
 
-        if ('image' !== $objMedia->media_type) {
+        if (!$img) {
             return;
         }
 
         // download
-        $objFile = $this->downloadFile($objMedia->source_url, $strTargetFolder);
+        $objFile = $this->downloadFile($img->getAttribute('src'), $strTargetFolder);
 
         // check if file exists
         if ($objFile) {
-            // check meta-information
-            $meta = StringUtil::deserialize($objFile->meta, true);
-            $language = 'en';
-
-            /** @var PageModel $page */
-            if (null !== ($page = $objArchive->getRelated('jumpTo'))) {
-                $language = $page->loadDetails()->language;
-            }
-
-            if ($title = strip_tags($objMedia->title->rendered)) {
-                $meta[$language]['title'] = $title;
-            }
-
-            if ($caption = strip_tags($objMedia->caption->rendered)) {
-                $meta[$language]['caption'] = $caption;
-            }
-
-            if ($objMedia->alt_text) {
-                $meta[$language]['alt'] = $objMedia->alt_text;
-            }
-
-            if (!empty($meta)) {
-                $objFile->meta = $meta;
-                $objFile->save();
-            }
-
             $objNews->addImage = '1';
             $objNews->singleSRC = $objFile->uuid;
             $objNews->save();
@@ -365,7 +371,7 @@ class Importer
         $objPathinfo = (object) pathinfo($objUrlinfo->path);
 
         // we only allow the download of files that have an extension
-        if (!$objPathinfo->extension) {
+        if (empty($objPathinfo->extension)) {
             return null;
         }
 
@@ -677,15 +683,23 @@ class Importer
      *
      * @param object $objPost
      */
-    protected function importComments(Client $client, $objPost, NewsModel $objNews): void
+    protected function importComments(Client $client, $objPost, NewsModel $objNews, NewsArchiveModel $archive): void
     {
+        if (!$archive->wpImportComments) {
+            return;
+        }
+
         // only import comments, if the ContaoCommentsBundle is available
         if (!\in_array('ContaoCommentsBundle', array_keys(System::getContainer()->getParameter('kernel.bundles')), true)) {
             return;
         }
 
         // retreive the comments for the post
-        $arrComments = $this->request($client, self::API_COMMENTS, ['post' => $objPost->id]);
+        try {
+            $arrComments = $this->request($client, self::API_COMMENTS, ['post' => $objPost->id]);
+        } catch (ClientException $e) {
+            return;
+        }
 
         // go through each comment
         foreach ($arrComments as $objWPComment) {
