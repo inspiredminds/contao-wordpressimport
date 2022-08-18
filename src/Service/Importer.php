@@ -73,9 +73,9 @@ class Importer
      */
     protected $framework;
 
-    /** 
-     * Logger
-     * 
+    /**
+     * Logger.
+     *
      * @var LoggerInterface
      */
     protected $logger;
@@ -254,16 +254,7 @@ class Importer
             $this->importImage($client, $objPost, $objNews, $objArchive, $strTargetFolder);
 
             // import the detail text
-            if ($objPost->content && $objPost->content->rendered) {
-                $objContent = new ContentModel();
-                $objContent->ptable = NewsModel::getTable();
-                $objContent->sorting = 128;
-                $objContent->tstamp = time();
-                $objContent->pid = $objNews->id;
-                $objContent->type = 'text';
-                $objContent->text = $this->processHtml($objPost->content->rendered, $strTargetFolder, $objArchive);
-                $objContent->save();
-            }
+            $this->importContent($objPost, $objNews, $objArchive, $strTargetFolder);
 
             // import the categories
             $this->importCategories($client, $objPost, $objNews, $objArchive);
@@ -292,13 +283,13 @@ class Importer
                 $objMedia = $this->request($client, self::API_MEDIA.'/'.$objPost->featured_media);
             } catch (ClientException $e) {
                 $this->logger->error('Could not fetch featured_media for Wordpress article "'.$objNews->headline.'": '.$e->getMessage());
-                
+
                 $objMedia = null;
             }
 
             if ($objMedia && 'image' === $objMedia->media_type) {
                 // Download
-                $objFile = $this->downloadFile($objMedia->source_url, $strTargetFolder);
+                $objFile = $this->downloadFile($objMedia->source_url, $strTargetFolder, $objArchive->wpImportUrl);
 
                 // Check if file exists
                 if ($objFile) {
@@ -349,7 +340,7 @@ class Importer
         }
 
         // download
-        $objFile = $this->downloadFile($img->getAttribute('src'), $strTargetFolder);
+        $objFile = $this->downloadFile($img->getAttribute('src'), $strTargetFolder, $objArchive->wpImportUrl);
 
         // check if file exists
         if ($objFile) {
@@ -360,14 +351,33 @@ class Importer
     }
 
     /**
+     * Imports the the rendered content of the Wordpress post as a single text
+     * content element within the Contao news article.
+     */
+    protected function importContent($objPost, NewsModel $objNews, NewsArchiveModel $objArchive, $strTargetFolder): void
+    {
+        if (empty($objPost->content) || empty($objPost->content->rendered)) {
+            return;
+        }
+
+        $objContent = new ContentModel();
+        $objContent->ptable = NewsModel::getTable();
+        $objContent->sorting = 128;
+        $objContent->tstamp = time();
+        $objContent->pid = $objNews->id;
+        $objContent->type = 'text';
+        $objContent->text = $this->processHtml($objPost->content->rendered, $strTargetFolder, $objArchive);
+        $objContent->save();
+    }
+
+    /**
      * Downloads a file.
      *
      * @param string $strUrl
      * @param string $strTargetFolder
-     *
-     * @return FilesModel|null
+     * @param string $strBase
      */
-    protected function downloadFile($strUrl, $strTargetFolder)
+    protected function downloadFile($strUrl, $strTargetFolder, $strBase): ?FilesModel
     {
         if (!$strUrl || !$strTargetFolder) {
             return null;
@@ -377,6 +387,10 @@ class Importer
 
         // get the url info
         $objUrlinfo = (object) parse_url($strUrl);
+
+        if (empty($objUrlinfo->path)) {
+            return null;
+        }
 
         // get the path info
         $objPathinfo = (object) pathinfo($objUrlinfo->path);
@@ -403,6 +417,11 @@ class Importer
         // check if subdirectory exists
         if (!file_exists(TL_ROOT.'/'.$strTargetFolder.'/'.$strSubFolder)) {
             mkdir(TL_ROOT.'/'.$strTargetFolder.'/'.$strSubFolder, 0777, true);
+        }
+
+        // Prepend base if necessary
+        if (0 !== stripos($strUrl, 'http')) {
+            $strUrl = rtrim($strBase, '/').'/'.ltrim($strUrl, '/');
         }
 
         // download the file
@@ -470,7 +489,7 @@ class Importer
             // check if image has src
             if ($img->getAttribute('src')) {
                 // download the src
-                if (null !== ($objFile = $this->downloadFile($img->getAttribute('src'), $strTargetFolder))) {
+                if (null !== ($objFile = $this->downloadFile($img->getAttribute('src'), $strTargetFolder, $archive->wpImportUrl))) {
                     // set insert tags
                     $img->setAttribute('src', '{{file::'.StringUtil::binToUuid($objFile->uuid).'}}');
 
@@ -497,7 +516,7 @@ class Importer
                     // must be 2
                     if (2 === \count($arrSrcdesc)) {
                         // download the src
-                        if (null !== ($objFile = $this->downloadFile($arrSrcdesc[0], $strTargetFolder))) {
+                        if (null !== ($objFile = $this->downloadFile($arrSrcdesc[0], $strTargetFolder, $archive->wpImportUrl))) {
                             // set the new src
                             $arrSrcdesc[0] = '{{file::'.StringUtil::binToUuid($objFile->uuid).'}}';
 
@@ -522,7 +541,7 @@ class Importer
             // check if surrounded by a link in which case that would be a lightbox
             if ('a' === $img->getParent()->getTag()->name() && ($imgUrl = $img->getParent()->getAttribute('href'))) {
                 // download the image
-                if (null !== ($objFile = $this->downloadFile($imgUrl, $strTargetFolder))) {
+                if (null !== ($objFile = $this->downloadFile($imgUrl, $strTargetFolder, $archive->wpImportUrl))) {
                     // set the new src
                     $img->getParent()->setAttribute('href', '{{file::'.StringUtil::binToUuid($objFile->uuid).'}}');
 
@@ -561,7 +580,7 @@ class Importer
             }
 
             // download the linked file
-            if (null !== ($file = $this->downloadFile($href, $strTargetFolder))) {
+            if (null !== ($file = $this->downloadFile($href, $strTargetFolder, $archive->wpImportUrl))) {
                 $link->setAttribute('href', '{{file::'.StringUtil::binToUuid($file->uuid).'}}');
             }
         }
