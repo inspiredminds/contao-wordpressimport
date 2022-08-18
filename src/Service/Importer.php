@@ -30,6 +30,7 @@ use GuzzleHttp\Exception\ClientException;
 use Nyholm\Psr7\Uri;
 use PHPHtmlParser\Dom\HtmlNode;
 use PHPHtmlParser\Exceptions\ChildNotFoundException;
+use Psr\Log\LoggerInterface;
 
 class Importer
 {
@@ -72,15 +73,23 @@ class Importer
      */
     protected $framework;
 
+    /** 
+     * Logger
+     * 
+     * @var LoggerInterface
+     */
+    protected $logger;
+
     /**
      * Constructor for Importer service.
      *
      * @param Connection $db Database connection
      */
-    public function __construct(Connection $db, ContaoFramework $framework)
+    public function __construct(Connection $db, ContaoFramework $framework, LoggerInterface $logger)
     {
         $this->db = $db;
         $this->framework = $framework;
+        $this->logger = $logger;
     }
 
     /**
@@ -282,6 +291,8 @@ class Importer
             try {
                 $objMedia = $this->request($client, self::API_MEDIA.'/'.$objPost->featured_media);
             } catch (ClientException $e) {
+                $this->logger->error('Could not fetch featured_media for Wordpress article "'.$objNews->headline.'": '.$e->getMessage());
+                
                 $objMedia = null;
             }
 
@@ -398,7 +409,7 @@ class Importer
         try {
             (new Client())->get($strUrl, ['sink' => TL_ROOT.'/'.$strFilePath]);
         } catch (\Exception $e) {
-            System::log('Error while downloading "'.$strUrl.'": '.StringUtil::substr($e->getMessage(), 280), __METHOD__, TL_ERROR);
+            $this->logger->error('Could not download "'.$strUrl.'": '.$e->getMessage());
 
             return null;
         }
@@ -698,6 +709,8 @@ class Importer
         try {
             $arrComments = $this->request($client, self::API_COMMENTS, ['post' => $objPost->id]);
         } catch (ClientException $e) {
+            $this->logger->error('Could not fetch comments for Wordpress article "'.$objNews->headline.'": '.$e->getMessage());
+
             return;
         }
 

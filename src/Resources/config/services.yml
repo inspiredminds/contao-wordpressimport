@@ -5,7 +5,7 @@ services:
 
     wordpressimporter:
         class: WordPressImportBundle\Service\Importer
-        arguments: ['@doctrine.dbal.default_connection', '@contao.framework']
+        arguments: ['@doctrine.dbal.default_connection', '@contao.framework', '@logger']
 
     wordpressimport_command:
         class: WordPressImportBundle\Command\ImportCommand
