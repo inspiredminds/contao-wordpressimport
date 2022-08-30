@@ -12,6 +12,7 @@ namespace WordPressImportBundle\Service;
 
 use Codefog\NewsCategoriesBundle\CodefogNewsCategoriesBundle;
 use Codefog\NewsCategoriesBundle\Model\NewsCategoryModel;
+use Contao\CommentsBundle\ContaoCommentsBundle;
 use Contao\CommentsModel;
 use Contao\Config;
 use Contao\ContentModel;
@@ -31,6 +32,8 @@ use Nyholm\Psr7\Uri;
 use PHPHtmlParser\Dom\HtmlNode;
 use PHPHtmlParser\Exceptions\ChildNotFoundException;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use WordPressImportBundle\Event\ImportWordPressPostEvent;
 
 class Importer
 {
@@ -74,6 +77,11 @@ class Importer
     protected $framework;
 
     /**
+     * @var EventDispatcherInterface
+     */
+    private $eventDispatcher;
+
+    /**
      * Logger.
      *
      * @var LoggerInterface
@@ -85,10 +93,11 @@ class Importer
      *
      * @param Connection $db Database connection
      */
-    public function __construct(Connection $db, ContaoFramework $framework, LoggerInterface $logger)
+    public function __construct(Connection $db, ContaoFramework $framework, EventDispatcherInterface $eventDispatcher, LoggerInterface $logger)
     {
         $this->db = $db;
         $this->framework = $framework;
+        $this->eventDispatcher = $eventDispatcher;
         $this->logger = $logger;
     }
 
@@ -264,6 +273,9 @@ class Importer
 
             // import comments
             $this->importComments($client, $objPost, $objNews, $objArchive);
+
+            // Dispatch event
+            $this->eventDispatcher->dispatch(new ImportWordPressPostEvent($client, $objPost, $objNews));
         } catch (\Exception $e) {
             // Delete in case of error
             $objNews->delete();
@@ -347,6 +359,23 @@ class Importer
             $objNews->addImage = '1';
             $objNews->singleSRC = $objFile->uuid;
             $objNews->save();
+        }
+    }
+
+    /**
+     * Imports the detail text of a wordpress news entry.
+     */
+    protected function importText($post, NewsModel $news, NewsArchiveModel $archive, string $targetFolder): void
+    {
+        if ($post->content && $post->content->rendered) {
+            $objContent = new ContentModel();
+            $objContent->ptable = $news->getTable();
+            $objContent->sorting = 128;
+            $objContent->tstamp = time();
+            $objContent->pid = $news->id;
+            $objContent->type = 'text';
+            $objContent->text = $this->processHtml($post->content->rendered, $targetFolder, $archive);
+            $objContent->save();
         }
     }
 
@@ -720,7 +749,7 @@ class Importer
         }
 
         // only import comments, if the ContaoCommentsBundle is available
-        if (!\in_array('ContaoCommentsBundle', array_keys(System::getContainer()->getParameter('kernel.bundles')), true)) {
+        if (!class_exists(ContaoCommentsBundle::class)) {
             return;
         }
 

@@ -53,3 +53,7 @@ Use `bin/console` in the Contao Standard Edition.
 If you activated the periodic import, the WordPress posts will be imported _hourly_ by Contao's cronjob. 
 
 _Note:_ by default only __10__ items will be imported with each cronjob execution. The import can take a long time (depending on the number of WordPress posts and the number of images to be downloaded). This limit is there so that a cronjob execution does not block a user's request for a long time (or at least until the `max_execution_time` limit is hit). You can change this limit in the _System Settings_.
+
+## Events
+
+Version `2.1.0` introduced an `WordPressImportBundle\Event\ImportWordPressPostEvent` which is fired for each imported WordPress post after it has been fully processed by the extension. It holds references to the used HTTP client instance, the WordPress post object and the `Contao\NewsModel` instance. This allows you to modify the imported news article.
