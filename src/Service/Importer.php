@@ -363,23 +363,6 @@ class Importer
     }
 
     /**
-     * Imports the detail text of a wordpress news entry.
-     */
-    protected function importText($post, NewsModel $news, NewsArchiveModel $archive, string $targetFolder): void
-    {
-        if ($post->content && $post->content->rendered) {
-            $objContent = new ContentModel();
-            $objContent->ptable = $news->getTable();
-            $objContent->sorting = 128;
-            $objContent->tstamp = time();
-            $objContent->pid = $news->id;
-            $objContent->type = 'text';
-            $objContent->text = $this->processHtml($post->content->rendered, $targetFolder, $archive);
-            $objContent->save();
-        }
-    }
-
-    /**
      * Imports the the rendered content of the Wordpress post as a single text
      * content element within the Contao news article.
      */
