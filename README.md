@@ -1,10 +1,10 @@
 [![](https://img.shields.io/packagist/v/inspiredminds/contao-wordpressimport.svg)](https://packagist.org/packages/inspiredminds/contao-wordpressimport)
 [![](https://img.shields.io/packagist/dt/inspiredminds/contao-wordpressimport.svg)](https://packagist.org/packages/inspiredminds/contao-wordpressimport)
 
-Contao WordPress Import Bundle
-=====================
+Contao WordPress Import
+=======================
 
-Contao 4 bundle that allows you to import news articles from WordPress posts via the WordPress JSON API.
+Contao 4 extension that allows you to import news articles from WordPress posts via the WordPress JSON API.
 
 ## Installation
 
