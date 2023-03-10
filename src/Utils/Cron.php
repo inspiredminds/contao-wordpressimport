@@ -11,6 +11,7 @@ declare(strict_types=1);
 namespace WordPressImportBundle\Utils;
 
 use Contao\Config;
+use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\CoreBundle\Monolog\ContaoContext;
 use Contao\CoreBundle\ServiceAnnotation\CronJob;
 use Psr\Log\LoggerInterface;
@@ -23,11 +24,13 @@ class Cron
 {
     private $importer;
     private $logger;
+    private $framework;
 
-    public function __construct(Importer $importer, LoggerInterface $logger)
+    public function __construct(Importer $importer, LoggerInterface $logger, ContaoFramework $framework)
     {
         $this->importer = $importer;
         $this->logger = $logger;
+        $this->framework = $framework;
     }
 
     /**
@@ -37,6 +40,8 @@ class Cron
      */
     public function import(): void
     {
+        $this->framework->initialize();
+
         try {
             $this->importer->import(Config::get('wpImportLimit'), true);
         } catch (\Exception $e) {

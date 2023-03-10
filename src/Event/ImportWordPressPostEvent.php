@@ -38,7 +38,7 @@ class ImportWordPressPostEvent extends Event
         $this->news = $news;
     }
 
-    /** 
+    /**
      * The HTTP client used for accessing the WordPress API.
      */
     public function getClient(): Client
@@ -48,7 +48,7 @@ class ImportWordPressPostEvent extends Event
 
     /**
      * The WordPress post received from the API.
-     * 
+     *
      * @return object
      */
     public function getPost()
@@ -56,7 +56,7 @@ class ImportWordPressPostEvent extends Event
         return $this->post;
     }
 
-    /** 
+    /**
      * The generated NewsModel instance for this WordPress post.
      */
     public function getNews(): NewsModel

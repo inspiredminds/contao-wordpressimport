@@ -23,7 +23,6 @@ use Contao\NewsArchiveModel;
 use Contao\NewsModel;
 use Contao\PageModel;
 use Contao\StringUtil;
-use Contao\System;
 use Contao\UserModel;
 use Doctrine\DBAL\Connection;
 use GuzzleHttp\Client;
@@ -33,6 +32,7 @@ use PHPHtmlParser\Dom\HtmlNode;
 use PHPHtmlParser\Exceptions\ChildNotFoundException;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use Webmozart\PathUtil\Path;
 use WordPressImportBundle\Event\ImportWordPressPostEvent;
 
 class Importer
@@ -77,11 +77,6 @@ class Importer
     protected $framework;
 
     /**
-     * @var EventDispatcherInterface
-     */
-    private $eventDispatcher;
-
-    /**
      * Logger.
      *
      * @var LoggerInterface
@@ -89,16 +84,29 @@ class Importer
     protected $logger;
 
     /**
+     * Contao root dir.
+     *
+     * @var string
+     */
+    protected $projectDir;
+
+    /**
+     * @var EventDispatcherInterface
+     */
+    private $eventDispatcher;
+
+    /**
      * Constructor for Importer service.
      *
      * @param Connection $db Database connection
      */
-    public function __construct(Connection $db, ContaoFramework $framework, EventDispatcherInterface $eventDispatcher, LoggerInterface $logger)
+    public function __construct(Connection $db, ContaoFramework $framework, EventDispatcherInterface $eventDispatcher, LoggerInterface $logger, string $projectDir)
     {
         $this->db = $db;
         $this->framework = $framework;
         $this->eventDispatcher = $eventDispatcher;
         $this->logger = $logger;
+        $this->projectDir = $projectDir;
     }
 
     /**
@@ -422,13 +430,13 @@ class Importer
         $strFilePath = $strTargetFolder.'/'.$strSubFolder.'/'.$strFileName;
 
         // check if file exists already
-        if (file_exists(TL_ROOT.'/'.$strFilePath)) {
+        if (file_exists(Path::join($this->projectDir, $strFilePath))) {
             return Dbafs::addResource($strFilePath);
         }
 
         // check if subdirectory exists
-        if (!file_exists(TL_ROOT.'/'.$strTargetFolder.'/'.$strSubFolder)) {
-            mkdir(TL_ROOT.'/'.$strTargetFolder.'/'.$strSubFolder, 0777, true);
+        if (!file_exists(Path::join($this->projectDir, $strTargetFolder, $strSubFolder))) {
+            mkdir(Path::join($this->projectDir, $strTargetFolder, $strSubFolder), 0777, true);
         }
 
         // Prepend base if necessary
@@ -438,14 +446,14 @@ class Importer
 
         // download the file
         try {
-            (new Client())->get($strUrl, ['sink' => TL_ROOT.'/'.$strFilePath]);
+            (new Client())->get($strUrl, ['sink' => Path::join($this->projectDir, $strFilePath)]);
         } catch (\Exception $e) {
             $this->logger->error('Could not download "'.$strUrl.'": '.$e->getMessage());
 
             return null;
         }
 
-        if (file_exists(TL_ROOT.'/'.$strFilePath)) {
+        if (file_exists(Path::join($this->projectDir, $strFilePath))) {
             return Dbafs::addResource($strFilePath);
         }
 

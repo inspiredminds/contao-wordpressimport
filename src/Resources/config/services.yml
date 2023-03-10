@@ -10,6 +10,7 @@ services:
             - '@contao.framework'
             - '@event_dispatcher'
             - '@logger'
+            - '%kernel.project_dir%'
 
     wordpressimport_command:
         class: WordPressImportBundle\Command\ImportCommand
@@ -18,4 +19,4 @@ services:
     wordpressimport_cron:
         public: true
         class: WordPressImportBundle\Utils\Cron
-        arguments: ['@wordpressimporter', '@logger']
+        arguments: ['@wordpressimporter', '@logger', '@contao.framework']
