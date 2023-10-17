@@ -33,6 +33,7 @@ use PHPHtmlParser\Exceptions\ChildNotFoundException;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Webmozart\PathUtil\Path;
+use WordPressImportBundle\Event\ApiResponseBodyEvent;
 use WordPressImportBundle\Event\ImportWordPressPostEvent;
 
 class Importer
@@ -216,9 +217,6 @@ class Importer
     protected function request(Client $client, string $endpoint, array $params = [])
     {
         $json = $client->get($endpoint, ['query' => $params])->getBody()->getContents();
-        if (substr($json, 0, 1) !== '[') {
-            $json = substr($json, strpos($json, '['));
-        }
 
         // Remove hidden characters from json (https://stackoverflow.com/questions/17219916/json-decode-returns-json-error-syntax-but-online-formatter-says-the-json-is-ok)
         for ($i = 0; $i <= 31; ++$i) {
@@ -230,7 +228,9 @@ class Importer
             $json = substr($json, 3);
         }
 
-        return json_decode($json);
+        $event = $this->eventDispatcher->dispatch(new ApiResponseBodyEvent($json, $client, $endpoint));
+
+        return json_decode($event->getBody());
     }
 
     /**
@@ -430,8 +430,8 @@ class Importer
         $strFileName = $objPathinfo->filename.'-'.substr(md5($strUrl), 0, 8).'.'.$objPathinfo->extension;
 
         // determine file paths
-        $absoluteFilePath = Path::join($this->projectDir, $strTargetFolder.'/'.$strSubFolder.'/'.$strFileName);
-        $strFilePath = Path::makeRelative($absoluteFilePath, $this->projectDir);
+        $strFilePath = Path::join($strTargetFolder, $strSubFolder, $strFileName);
+        $absoluteFilePath = Path::join($this->projectDir, $strFilePath);
 
         // check if file exists already
         if (file_exists($absoluteFilePath)) {
