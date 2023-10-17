@@ -33,6 +33,7 @@ use PHPHtmlParser\Exceptions\ChildNotFoundException;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Webmozart\PathUtil\Path;
+use WordPressImportBundle\Event\ApiResponseBodyEvent;
 use WordPressImportBundle\Event\ImportWordPressPostEvent;
 
 class Importer
@@ -217,17 +218,9 @@ class Importer
     {
         $json = $client->get($endpoint, ['query' => $params])->getBody()->getContents();
 
-        // Remove hidden characters from json (https://stackoverflow.com/questions/17219916/json-decode-returns-json-error-syntax-but-online-formatter-says-the-json-is-ok)
-        for ($i = 0; $i <= 31; ++$i) {
-            $json = str_replace(\chr($i), '', $json);
-        }
-        $json = str_replace(\chr(127), '', $json);
+        $event = $this->eventDispatcher->dispatch(new ApiResponseBodyEvent($json, $client, $endpoint));
 
-        if (0 === strpos(bin2hex($json), 'efbbbf')) {
-            $json = substr($json, 3);
-        }
-
-        return json_decode($json);
+        return json_decode($event->getBody());
     }
 
     /**
@@ -426,11 +419,12 @@ class Importer
         // determine the filename
         $strFileName = $objPathinfo->filename.'-'.substr(md5($strUrl), 0, 8).'.'.$objPathinfo->extension;
 
-        // determine the full (relative) file path
-        $strFilePath = $strTargetFolder.'/'.$strSubFolder.'/'.$strFileName;
+        // determine file paths
+        $strFilePath = Path::join($strTargetFolder, $strSubFolder, $strFileName);
+        $absoluteFilePath = Path::join($this->projectDir, $strFilePath);
 
         // check if file exists already
-        if (file_exists(Path::join($this->projectDir, $strFilePath))) {
+        if (file_exists($absoluteFilePath)) {
             return Dbafs::addResource($strFilePath);
         }
 
@@ -446,14 +440,14 @@ class Importer
 
         // download the file
         try {
-            (new Client())->get($strUrl, ['sink' => Path::join($this->projectDir, $strFilePath)]);
+            (new Client())->get($strUrl, ['sink' => $absoluteFilePath]);
         } catch (\Exception $e) {
             $this->logger->error('Could not download "'.$strUrl.'": '.$e->getMessage());
 
             return null;
         }
 
-        if (file_exists(Path::join($this->projectDir, $strFilePath))) {
+        if (file_exists($absoluteFilePath)) {
             return Dbafs::addResource($strFilePath);
         }
 
