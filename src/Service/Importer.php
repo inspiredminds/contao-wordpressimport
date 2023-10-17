@@ -218,16 +218,6 @@ class Importer
     {
         $json = $client->get($endpoint, ['query' => $params])->getBody()->getContents();
 
-        // Remove hidden characters from json (https://stackoverflow.com/questions/17219916/json-decode-returns-json-error-syntax-but-online-formatter-says-the-json-is-ok)
-        for ($i = 0; $i <= 31; ++$i) {
-            $json = str_replace(\chr($i), '', $json);
-        }
-        $json = str_replace(\chr(127), '', $json);
-
-        if (0 === strpos(bin2hex($json), 'efbbbf')) {
-            $json = substr($json, 3);
-        }
-
         $event = $this->eventDispatcher->dispatch(new ApiResponseBodyEvent($json, $client, $endpoint));
 
         return json_decode($event->getBody());

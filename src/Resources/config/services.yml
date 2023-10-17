@@ -1,7 +1,7 @@
 services:
     _defaults:
         autoconfigure: true
-        public: false 
+        public: false
 
     wordpressimporter:
         class: WordPressImportBundle\Service\Importer
@@ -20,3 +20,6 @@ services:
         public: true
         class: WordPressImportBundle\Utils\Cron
         arguments: ['@wordpressimporter', '@logger', '@contao.framework']
+
+    WordPressImportBundle\EventListener\ApiResponseBodyListener:
+        autowire: true
