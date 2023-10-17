@@ -216,6 +216,9 @@ class Importer
     protected function request(Client $client, string $endpoint, array $params = [])
     {
         $json = $client->get($endpoint, ['query' => $params])->getBody()->getContents();
+        if (substr($json, 0, 1) !== '[') {
+            $json = substr($json, strpos($json, '['));
+        }
 
         // Remove hidden characters from json (https://stackoverflow.com/questions/17219916/json-decode-returns-json-error-syntax-but-online-formatter-says-the-json-is-ok)
         for ($i = 0; $i <= 31; ++$i) {
@@ -426,11 +429,12 @@ class Importer
         // determine the filename
         $strFileName = $objPathinfo->filename.'-'.substr(md5($strUrl), 0, 8).'.'.$objPathinfo->extension;
 
-        // determine the full (relative) file path
-        $strFilePath = $strTargetFolder.'/'.$strSubFolder.'/'.$strFileName;
+        // determine file paths
+        $absoluteFilePath = Path::join($this->projectDir, $strTargetFolder.'/'.$strSubFolder.'/'.$strFileName);
+        $strFilePath = Path::makeRelative($absoluteFilePath, $this->projectDir);
 
         // check if file exists already
-        if (file_exists(Path::join($this->projectDir, $strFilePath))) {
+        if (file_exists($absoluteFilePath)) {
             return Dbafs::addResource($strFilePath);
         }
 
@@ -446,14 +450,14 @@ class Importer
 
         // download the file
         try {
-            (new Client())->get($strUrl, ['sink' => Path::join($this->projectDir, $strFilePath)]);
+            (new Client())->get($strUrl, ['sink' => $absoluteFilePath]);
         } catch (\Exception $e) {
             $this->logger->error('Could not download "'.$strUrl.'": '.$e->getMessage());
 
             return null;
         }
 
-        if (file_exists(Path::join($this->projectDir, $strFilePath))) {
+        if (file_exists($absoluteFilePath)) {
             return Dbafs::addResource($strFilePath);
         }
 
