@@ -57,3 +57,7 @@ _Note:_ by default only __10__ items will be imported with each cronjob executio
 ## Events
 
 Version `2.1.0` introduced an `WordPressImportBundle\Event\ImportWordPressPostEvent` which is fired for each imported WordPress post after it has been fully processed by the extension. It holds references to the used HTTP client instance, the WordPress post object and the `Contao\NewsModel` instance. This allows you to modify the imported news article.
+
+Since version `2.2.0` there is also an `WordPressImportBundle\Event\ApiResponseBodyEvent` which is fired for each
+response of WordPress' REST API. This will let you fix invalid JSON output for example, before processing the response 
+further (see [here](https://github.com/inspiredminds/contao-wordpressimport/pull/9)).
