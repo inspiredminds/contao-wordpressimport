@@ -16,6 +16,7 @@ use Contao\CommentsBundle\ContaoCommentsBundle;
 use Contao\CommentsModel;
 use Contao\Config;
 use Contao\ContentModel;
+use Contao\CoreBundle\ContaoCoreBundle;
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\Dbafs;
 use Contao\FilesModel;
@@ -236,6 +237,9 @@ class Importer
         // get the target folder
         $strTargetFolder = FilesModel::findOneByUuid($objArchive->wpImportFolder)->path;
 
+        // Determine the boolean value
+        $falseValue = version_compare(ContaoCoreBundle::getVersion(), '5', '<') ? '' : 0;
+
         // create new news
         $objNews = new NewsModel();
         $objNews->pid = $objArchive->id;
@@ -249,7 +253,7 @@ class Importer
         $objNews->floating = 'above';
         $objNews->alias = $objPost->slug;
         $objNews->wpPostId = $objPost->id;
-        $objNews->noComments = ('closed' !== $objPost->comment_status ? '' : '1');
+        $objNews->noComments = ('closed' !== $objPost->comment_status ? $falseValue : 1);
         $objNews->author = $objArchive->wpDefaultAuthor;
 
         if (null !== NewsModel::findOneByAlias($objNews->alias)) {
