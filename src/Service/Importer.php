@@ -314,8 +314,8 @@ class Importer
                     $meta = StringUtil::deserialize($objFile->meta, true);
                     $language = 'en';
 
-                    /** @var PageModel $page */
                     if (null !== ($page = $objArchive->getRelated('jumpTo'))) {
+                        /** @var PageModel $page */
                         $language = $page->loadDetails()->language;
                     }
 
@@ -481,8 +481,8 @@ class Importer
         // determine language
         $language = 'en';
 
-        /** @var PageModel $page */
         if (null !== ($page = $archive->getRelated('jumpTo'))) {
+            /** @var PageModel $page */
             $language = $page->loadDetails()->language;
         }
 
